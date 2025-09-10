@@ -1,13 +1,36 @@
 # cloud-1
-A 42 project using ansible.
+A 42 project using ansible to deploy a wordpress website on a scaleway vm (or any vm).
 
 # Ansible
+
+- [cloud-1](#cloud-1)
+- [Ansible](#ansible)
+  - [Documentations](#documentations)
+  - [Concepts](#concepts)
+    - [Control-node](#control-node)
+    - [Managed nodes](#managed-nodes)
+    - [Inventory](#inventory)
+    - [Playbooks](#playbooks)
+    - [Modules](#modules)
+    - [Plugins](#plugins)
+  - [Bonnes pratiques et tips](#bonnes-pratiques-et-tips)
+  - [Le fichier de configuration](#le-fichier-de-configuration)
+    - [Le fichier ansible.cfg](#le-fichier-ansiblecfg)
+    - [Le cli `ansible-config`](#le-cli-ansible-config)
+
+
+## Documentations
+
+Le site officiel de ansible : [lien](https://docs.ansible.com/)
+
+Les videos tres completes de xavki sur youtube : [lien](https://www.youtube.com/watch?v=8Hb-i9lXdXA&list=PLn6POgpklwWoCpLKOSw3mXCqbRocnhrh-&index=1)
+
 
 ## Concepts
 
 ### Control-node
 
-La machine sur laquelle est installe le cli ansible (`ansible-playbook`, `ansible`, `ansible-vault`). Cela peut etre n'importe quel ordinateur avec les specifications necessaires.
+La machine sur laquelle est installee le cli ansible (`ansible-playbook`, `ansible`, `ansible-vault`). Cela peut etre n'importe quel ordinateur avec les specifications necessaires.
 
 ### Managed nodes
 
@@ -67,7 +90,7 @@ Identity added: /home/user/.ssh/id_ed25519 (user@cloud1)
 
 - Pour effacer l'identite de l'agent : `ssh-add -D`
 
-- On peut configurer l'hote sur lequel on se connecte avec SSH pour se faciliter la vie. On peut par exemple faire en sorte de juste ecrire `ssh cloud-1` Exemple
+- On peut configurer l'hote sur lequel on se connecte avec SSH pour se faciliter la vie. On peut par exemple faire en sorte de juste ecrire `ssh cloud-1` Exemple :
 
 ```bash
 touch ~/.ssh/config
@@ -85,6 +108,38 @@ Host cloud-1
 ```
 
 - On peut tester le connexion a un serveur distant et la presence d'un interpreteur python accepte via la commande : `ansible -i "root@chbd-cloud1.duckdns.org," all -m ping`. Ici on se connecte au serveur cloud1.duckdns.org et fait un ping dessus ainsi qu'une decouverte de l'interpreteur installe. Le flag `-i` correspond a l'option `--inventory` qui specifie l'hote a tester (voir ci-dessus).
-- 
+
+
+## Le fichier de configuration
+
+On peut configurer ansible soit :
+
+- *via* le cli `ansible-config`
+- soit *via* l fichier ansible.cfg
+
+
+### Le fichier ansible.cfg
+
+On peut mettre le fichier de configuration dans:
+
+- `ansible.cfg` (dans le dossier courant)
+- `~/.ansible.cfg` (dans le /home)
+- `/etc/ansible/ansible.cfg` (dans le dossier dedie aux configuration `/etc`)
+
+La prise en compte des fichiers se fait dans de haut en bas. Le haut etant prioritaire sur le bas.
+
+> [!WARNING]
+> Si le fichier `ansible.cfg` est dans un dossier scriptible par tout le monde, ansible ne le prendra pas en compte car n'importe qui serait en mesure de mettre son propre fichier de configuration, et ainsi executer des commandes malicieuse sur le ou les serveur(s) gere(s) par ansible. Il faut donc mettre en place des droits appropries, par exemple en ne permettant qu'aux personne faisant parties d'un de pouvoir ecrire dans le dossier ou se trouve la configuration.
+
+
+### Le cli `ansible-config`
+
+On peut generer une configuration par defaut complete (avec prise en compte des ;odules installes) avec la commande suivante :
+
+```bash
+ansible-config init --disabled -t all > ansible.cfg
+```
+
+Cela est un bon point de depart pour customiser le comportement de ansible. Cependant, il faut faire attention ou place le fichier, comme vu a la section [Le fichier ansible.cfg](#le-fichier-ansiblecfg).
 
 
