@@ -17,6 +17,9 @@
     - [Introduction](#introduction)
     - [Quelques options a connaitre](#quelques-options-a-connaitre)
     - [Les modules](#les-modules)
+  - [L'inventory](#linventory)
+    - [Qu'est-ce que c'est ?](#quest-ce-que-cest-)
+    - [Le fichier d'inventaire](#le-fichier-dinventaire)
 
 ## Documentations
 
@@ -173,19 +176,19 @@ Le modules prennent souvent un argument de type "var=value". On peut egalement e
 
 Quelques modules :
 
-- `command` : permet d'executer une commande sur le serveur gere.
+- `command` : permet d'executer une commande sur le serveur gere. [Lien de la doc](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/command_module.html)
 
 ```bash
 ansible -i "cloud-1," all -m command -a id
 ```
 
-- `shell` : permet d'executer des commandes a la maniere du shell bash, avec pipes, tests (`||`, `&&`)
+- `shell` : permet d'executer des commandes a la maniere du shell bash, avec pipes, tests (`||`, `&&`). [Lien de la doc](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/shell_module.html)
 
 ```bash
 ansible -i "cloud-1," all -m shell -a "cat test.txt | grep whatever"
 ```
 
-- `apt` : permet d'utiliser le programme apt afin de mettre a jour les paquets.
+- `apt` : permet d'utiliser le programme apt afin de mettre a jour les paquets. [Lien de la doc](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/apt_module.html)
 
 ```bash
 # met a jour le cache
@@ -195,6 +198,55 @@ ansible -i "cloud-1," all -m apt -a "upgrade=yes"
 ```
 
 > [!TIP]
-> Si l'utilisateur distant n'est pas root, il faut utiliser l'option `-b` qui permet l'elevation de privileges. **Il faut obligatoirement que python soit installe sur la machine distante.**
-> Sinon faire : `ansible -i "cloud-1," all -m raw -a "apt install python3"`
+> Si l'utilisateur distant n'est pas root, il faut utiliser les options `-b-K` qui permet l'elevation de privileges. **Il faut obligatoirement que python soit installe sur la machine distante.**
+> Sinon faire : `ansible -i "cloud-1," all -m raw -a "apt install python3"` et ensuite utiliser le module `apt` ou tout autre module souhaite (qui fonctionnent tous avec python hormis le module `raw`)
+
+- `copy` : ce module sert a copier des fichiers. Il existe de nombreuses options de copie. [Lien vers la doc](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/copy_module.html)
+
+```bash
+ansible -i "cloud-1," all -m copy -a "src:monfichier dest:le_chemin_de_destination"
+```
+
+- `fetch` : permet de telecharger un fichier present sur la machine distante. [Lien vers la doc](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/fetch_module.html#ansible-collections-ansible-builtin-fetch-module)
+
+```bash
+ansible -i "cloud-1," all -m copy -a "src:/chemin/vers/fichier/distant dest:le_chemin_de_destination"
+```
+
+- `setup` : permet de retrouver toutes les informations collectees par ansible (les *gather facts*) sur le serveur distant. Peut avoir des filtres. [Lien vers la doc](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/setup_module.html#ansible-collections-ansible-builtin-setup-module)
+
+```bash
+ansible -i "cloud-1," all -m setup
+```
+
+## L'inventory
+
+### Qu'est-ce que c'est ?
+
+C'est l'inventaire des machines et des variables qui les definissent. C'est central dans ansible.
+
+Il decrit l'infrastructure : les serveurs, le typage de ces serveurs (webserver, serveur relay etc.).
+
+Il y a deux types d'instance :
+
+- hosts
+- groups
+
+Il existe plusieurs format pour l'`inventory` :
+
+- ini : format plat (deconseille)
+- yaml : pour ecrire
+- json : pour traiter les donnees (deconseille)
+
+Il est possible d'utiliser des patterns pour faciliter la nomenclature.
+
+In fine l'inventory c'est :
+
+- le fichier d'inventaire
+- le repertoire group_vars
+- le repertoire host_vars
+
+### Le fichier d'inventaire
+
+Le groupe racine est `all`.
 
