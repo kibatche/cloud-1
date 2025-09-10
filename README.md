@@ -108,7 +108,7 @@ Host cloud-1
     ForwardX11 no
 ```
 
-- On peut tester le connexion a un serveur distant et la presence d'un interpreteur python accepte via la commande : `ansible -i "cloud-1," all -m ping`. Ici on se connecte au serveur cloud1.duckdns.org et fait un ping dessus ainsi qu'une decouverte de l'interpreteur installe. Le flag `-i` correspond a l'option `--inventory` qui specifie l'hote a tester (voir ci-dessus).
+- On peut tester la connexion a un serveur distant et la presence d'un interpreteur python accepte via la commande : `ansible -i "cloud-1," all -m ping`. Ici on se connecte au serveur cloud1.duckdns.org et fait un ping dessus ainsi qu'une decouverte de l'interpreteur installe. Le flag `-i` correspond a l'option `--inventory` qui specifie l'hote a tester (voir ci-dessus).
 
 ## Le fichier de configuration
 
@@ -164,7 +164,7 @@ Sert a faire :
 - `--key-file` : specifier la cle ssh privee
 - `-e`, `--extra-var` : definir des variables
 - `--ask-vault-pass` : demander le mot de passe du vault (coffre de mot de passe)
-- `--vault-password-file`: fichier de deverouillage du vault
+- `--vault-password-file` : fichier de deverouillage du vault
 - `-f`, `--fork` : permet d'augmenter les threads pour la parallelisation
 - `-vvv` : activer le mode verbeux pour le debug
 
@@ -198,7 +198,7 @@ ansible -i "cloud-1," all -m apt -a "upgrade=yes"
 ```
 
 > [!TIP]
-> Si l'utilisateur distant n'est pas root, il faut utiliser les options `-b-K` qui permet l'elevation de privileges. **Il faut obligatoirement que python soit installe sur la machine distante.**
+> Si l'utilisateur distant n'est pas root, il faut utiliser les options `-b -K` qui permettent l'elevation de privileges. **Il faut obligatoirement que python soit installe sur la machine distante.**
 > Sinon faire : `ansible -i "cloud-1," all -m raw -a "apt install python3"` et ensuite utiliser le module `apt` ou tout autre module souhaite (qui fonctionnent tous avec python hormis le module `raw`)
 
 - `copy` : ce module sert a copier des fichiers. Il existe de nombreuses options de copie. [Lien vers la doc](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/copy_module.html)
