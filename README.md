@@ -20,6 +20,7 @@
   - [L'inventory](#linventory)
     - [Qu'est-ce que c'est ?](#quest-ce-que-cest-)
     - [Le fichier d'inventaire](#le-fichier-dinventaire)
+    - [Hierarchisation d'un projet ansible](#hierarchisation-dun-projet-ansible)
 
 ## Documentations
 
@@ -232,15 +233,15 @@ Il y a deux types d'instance :
 - hosts
 - groups
 
-Il existe plusieurs format pour l'`inventory` :
+Il existe plusieurs formats pour l'`inventory` :
 
 - ini : format plat (deconseille)
 - yaml : pour ecrire
-- json : pour traiter les donnees (deconseille)
+- json : pour traiter les donnees (deconseille pour ecrire)
 
 Il est possible d'utiliser des patterns pour faciliter la nomenclature.
 
-In fine l'inventory c'est :
+*In fine* l'inventory c'est :
 
 - le fichier d'inventaire
 - le repertoire group_vars
@@ -248,5 +249,70 @@ In fine l'inventory c'est :
 
 ### Le fichier d'inventaire
 
-Le groupe racine est `all`.
+Le groupe racine est `all`. Il suit la nomenclature des yaml.
+
+Il y a un ordre hierarchique des variables.
+
+Il y a 4 familles de variables :
+
+- celles de configuration
+- celles de la ligne de commande
+- celles des playbooks
+- celles des roles
+
+Il y a 22 variables en tout, classees ci-dessous par precedence (celle en haut est hierarchiquement plus faible que celle tout en bas):
+
+- Command-line values (for example, -u my_user, these are not variables)
+- Role defaults (as defined in Role directory structure)
+- Inventory file or script group vars
+- Inventory group_vars/all
+- Playbook group_vars/all
+- Inventory group_vars/*
+- Playbook group_vars/*
+- Inventory file or script host vars
+- Inventory host_vars/*
+- Playbook host_vars/*
+- Host facts and cached set_facts
+- Play vars
+- Play vars_prompt
+- Play vars_files
+- Role vars (as defined in Role directory structure)
+- Block vars (for tasks in block only)
+- Task vars (for the task only)
+- include_vars
+- Registered vars and set_facts
+- Role (and include_role) params
+- include params
+- Extra vars (for example, -e "user=my_user")(always win precedence)
+
+[Lien vers la documentation.](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_variables.html)
+
+### Hierarchisation d'un projet ansible
+
+On peut appliquer la hierarchie suivante :
+
+```bash
+.
+└── recette
+    ├── 00_inventory.yml
+    ├── ansible.cfg
+    ├── group_vars
+    │   ├── all.yml
+    │   ├── dbserver
+    │   │   ├── variables.yml
+    │   │   └── vault.yml
+    │   └── webserver
+    │       ├── variables.yml
+    │       └── vault.yml
+    └── host_vars
+        └── scaleway-cloud-1
+            ├── variables.yml
+            └── vault.ym
+```
+
+> [!NOTE]
+> Cette hierarchie est la a titre d'exemple et il faut adapter selon le projet que l'on fait.
+
+> [!TIP]
+> Le fait de ranger les fichiers et dossier dans un super dossier de type `recette`, `prod` etc permet de facilement lancer telle ou telle tache selon ce qu'on souhaite avec `ansible -i prod` par exemple pour lancer les commandes de production.
 
