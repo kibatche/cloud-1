@@ -26,6 +26,9 @@
     - [Exemple d'un simple playbook avec le module debug](#exemple-dun-simple-playbook-avec-le-module-debug)
   - [Le module `file`](#le-module-file)
     - [Exemple d'utilisation du module file](#exemple-dutilisation-du-module-file)
+  - [Le module `user`](#le-module-user)
+    - [Quelques options utiles du module `user`](#quelques-options-utiles-du-module-user)
+    - [Quelques exemple de l'utilsation du module `user`](#quelques-exemple-de-lutilsation-du-module-user)
 
 ## Documentations
 
@@ -693,4 +696,28 @@ Voici un exemple complet venant du site d'ansible :
     path: /etc/foo
     state: absent
 ```
+
+## Le module `user`
+
+[Lien vers la doc.](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/user_module.html#ansible-builtin-user-module-manage-user-accounts)
+
+Le module `user` permet de creer des utilisateurs et de les gerer.
+
+### Quelques options utiles du module `user`
+
+- `append` : Si `true`, ajoute l'utilisateur dans les groupes specifies par `groups`, si `false`, ajoute l'utilisateur specifie dans `groups`, tout en le retirant de tous les autres groupes.
+- `create_home` : `true` ou `false`. Cree ou non un home pour l'utilisateur en question.
+- `force` : `true` ou `false`. Cela n'affecte que `state=absent`, cela force la suppression de l'utilisateur et des répertoires associés sur les plateformes prises en charge. Le comportement est identique à celui de `userdel --force`. Lorsqu'il est utilisé avec `generate_ssh_key=yes`, cela force le remplacement d'une clé existante.
+- `generate_ssh_key` : genere une cle ssh pour l'utilisateur. Sans l'option `force`, ne **REMPLACE PAS** une cle precedement generee.
+- `group` : le groupe primaire du user
+- `groups` : tout autre groupe auquel on souhaite ajoute le user en question. Par defaut, l'utilisateur est retire des autres groupes non mentionne (hormis le groupe primaire). On peut configurer `append` pour modifier ce comportement.
+- `home` : configure le home (path)
+- `name` : nom de l'utilisateur a creer ou modifier ou supprimer.
+- `password` : mot de passe de l'utilisateur si fourni. **On doit mettre le hash**. Le module vault nous permettra de mieux gerer cet aspect pour ne pas mettre demot de passe en dur.
+- `remove` : Ne fonctionne qu'avec `state=absent`. Tente de supprimer les dossiers appartenent a l'utilisateur en cas de suppression de ce dernier.
+- `shell` : Option qui permet de configurer le shell. Pour les compte systeme, on peut mettre /usr/bin/false si cela est accepte. Le comportement par defaut de cette option depend de la commande utilisee en sous main.
+- `system` : determine si un compte est un compte systeme ou non (uid < 1000).
+- `umask` : met en place le umask par defaut de lutilisateur. Ne foncitonne que sur linux.
+
+### Quelques exemple de l'utilsation du module `user`
 
