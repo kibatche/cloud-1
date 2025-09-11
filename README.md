@@ -21,6 +21,9 @@
     - [Qu'est-ce que c'est ?](#quest-ce-que-cest-)
     - [Le fichier d'inventaire](#le-fichier-dinventaire)
     - [Hierarchisation d'un projet ansible](#hierarchisation-dun-projet-ansible)
+  - [Le playbook](#le-playbook)
+    - [Quelques options](#quelques-options)
+  - [Le module `file`](#le-module-file)
 
 ## Documentations
 
@@ -314,5 +317,133 @@ On peut appliquer la hierarchie suivante :
 > Cette hierarchie est la a titre d'exemple et il faut adapter selon le projet que l'on fait.
 
 > [!TIP]
-> Le fait de ranger les fichiers et dossier dans un super dossier de type `recette`, `prod` etc permet de facilement lancer telle ou telle tache selon ce qu'on souhaite avec `ansible -i prod` par exemple pour lancer les commandes de production.
+> Le fait de ranger les fichiers et dossiers dans un super dossier de type `recette`, `prod` etc permet de facilement lancer telle ou telle tache selon ce qu'on souhaite avec `ansible -i prod` par exemple pour lancer les commandes de production.
 
+## Le playbook
+
+Le playbook sert a plusieurs choses, mais principalement :
+
+- a declencher les action a realiser
+- a articuler l'inventory - cad les machines gerees (managed nodes) - avec les roles, cad les actions a executer
+- a executer des tasks. **C'est une mauvaise pratique a eviter**
+- inclure des variables. **C'est une mauvaise pratique a eviter**
+- specifier un utilisateur particulier et sa maniere d'interagir avec les tasks
+
+La commande utilisee pour les `playbooks` est `ansible-playbooks`
+
+### Quelques options
+
+- `-i` : sert  specifier l'inventory
+- `-l` : limit, sert a specifier un ou des groupe.s ou serveurs, ou encore un pattern (c'est une sorte de filtre sur `l'inventory`)
+- `-u` : user, specifie l'utilisateur
+- `-b` : elevation de privilege (sudo)
+- `-K` : pour le mot de passe de sudo
+- `-C` : permet un dry run
+- `-D` : diff, permet d'afficher les differences avant-apres une `tasks`
+- `--ask-vault` : affiche un prompt pour le mot de passe du vault
+- `--syntax-check` : permet de verifier la syntaxe du fichier playbook
+- `--vault-password-file` : permet de specifier le fichier de mot de passe pour le vault
+- `-e` : permet de surcharger ou creer n'importe quelle variable
+- `-f` : fork, pour augmenter ou abaisser le nombre de threads
+- `-t` : permet de filtrer sur les tags
+- `--flush-cache` : ne pas utiliser le cache pour executer
+- `--step` : permet d'executer une tache a la fois
+- `--start-at-task` : commencer a une tache specifique
+- `--list-tags` : liste les tags
+- `--list-task` : liste les taches qui vont etre executees
+
+VOici un playbook possible :
+
+```yaml
+- name: Playbook de test ftw
+  hosts: scaleway_srv
+  remote_user: root
+  tasks:
+    - name: "Un debug"
+      ansible.builtin.debug:
+        msg: "{{ var1 }}"
+```
+
+> [!NOTE]
+> Ce playbook ne respecte pas les bonnes pratiques, car il execute une tache. Il est ici a titre d'exemple.
+
+Et voici un inventory tres simple :
+
+```yaml
+scaleway_srv:
+  hosts:
+    cloud-1:
+# peut etre rajouter une vm pour la suite, comme ca il y aurait le multiple server. Ne pas oublier de rajouter le hostnme dans /etc/hosts
+# exemple : IP machine = cloud2.local
+vm_srv:
+  hosts:
+    cloud-2:
+```
+
+L'arbre des fichiers est le suivant :
+
+```bash
+.
+├── README.md
+└── recette
+    ├── ansible.cfg
+    ├── inventory
+    │   └── 00_inventory.yml
+    └── playbook
+        └── playbook.yml
+```
+
+On peut executer le playbook avec la commande suivante :
+
+```bash
+➜  cloud-1 git:(main) ansible-playbook -i recette/inventory recette/playbook/playbook.yml -e "var1=yoyo"      
+
+PLAY [Playbook de test ftw] ******************************************************************************************************************************************************************************
+
+TASK [Gathering Facts] ***********************************************************************************************************************************************************************************
+ok: [cloud-1]
+
+TASK [Un debug] ******************************************************************************************************************************************************************************************
+ok: [cloud-1] => {
+    "msg": "yoyo"
+}
+
+PLAY RECAP ***********************************************************************************************************************************************************************************************
+cloud-1                    : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0 
+```
+
+## Le module `file`
+
+[Lien vers la doc.](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/file_module.html)
+
+Ce module gere les fichiers et les repertoire avec de nombreuses options.
+
+Notamment, il sert a :
+
+- Définir les attributs des fichiers, répertoires ou liens symboliques et leurs cibles.
+- Supprimer des fichiers, des liens symboliques ou des répertoires.
+
+De nombreux autres modules prennent les mêmes options que le module `ansible.builtin.file`, notamment `ansible.builtin.copy`, `ansible.builtin.template` et `ansible.builtin.assemble`.
+
+Quelques options utiles tout le temps :
+
+- `mode` : agit comme `chmod`, avec la meme nomenclature (i.e, `mode: '0644'`). Il est egalement possible d'utiliser celle ci : `mode: u+rw,g-wx,o-rwx`, ou on definit les acces selon le user, le groupe et le reste du monde.
+- `owner` : determine le proprietaire du fichier. `owner: monutilisateur`
+- `group` : determine le groupe du fichier. `group: monutilisateur`
+- `path` (obligatoire) : chemin du fichier a gerer
+- `recurse` : Peut etre `true` ou `false`. Change de facon recursive les attributs specifies sur le contenu du dossier choisi. Ne fonctionne que quand `state` est configure a `directory`
+- `state` : En l'absence de ce paramètre, les répertoires seront supprimés de manière récursive et les fichiers ou liens symboliques seront dissociés. Dans le cas d'un répertoire, si `diff` est déclaré, les fichiers et dossiers supprimés seront répertoriés sous `path_contents`. Notez que le parametre `absent` n'entraînera pas l'échec de `ansible.builtin.file` si le chemin n'existe pas, car l'état n'a pas changé.
+  - Si `directory`, tous les sous-répertoires intermédiaires seront créés s'ils n'existent pas avec les permissions fournies.
+  - Si `file`, sans autre option, renvoie l'état actuel du chemin.
+  - Si `file`, même avec d'autres options (telles que `mode`), le fichier sera modifié s'il existe, mais ne sera **PAS** créé s'il n'existe pas. Définissez sur `touch` ou utilisez le module `ansible.builtin.copy` ou `ansible.builtin.template` si vous souhaitez créer le fichier s'il n'existe pas.
+  - Si `hard`, le lien physique sera créé ou modifié.
+  - Si `link`, le lien symbolique sera créé ou modifié.
+  - Si `touch`, un fichier vide sera créé si le fichier n'existe pas, tandis qu'un fichier ou un répertoire existant recevra des heures d'accès et de modification mises à jour (similaire au fonctionnement de `touch` à partir de la ligne de commande).
+  - La valeur par défaut est l'état actuel du fichier s'il existe, le répertoire si `recurse=true`, ou l'option `file` dans le cas contraire.
+  - Choix :
+    - `absent`
+    - `directory`
+    - `file`
+    - `hard`
+    - `link`
+    - `touch`

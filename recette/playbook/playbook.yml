@@ -1,0 +1,7 @@
+- name: Playbook de test ftw
+  hosts: scaleway_srv
+  remote_user: root
+  tasks:
+    - name: "Un debug"
+      ansible.builtin.debug:
+        msg: "{{ var1 }}"

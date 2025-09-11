@@ -1,8 +1,0 @@
-all:
-  scaleway-srv:
-    hosts:
-      cloud-1:
-# peut etre rajouter une vm pour la suite, comme ca il y aurait le multiple server
-  #vm-srv:
-    #hosts:
-      #cloud-1.local: <- ne pas oublier de rajouter le nom de domaine dans /etc/hosts
