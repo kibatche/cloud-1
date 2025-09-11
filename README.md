@@ -1040,7 +1040,9 @@ Ainsi le fichier test ne sera cree que si le retour du module `stat` sur un fich
 ## Les boucles : `with_items` et autres
 
 [Lien vers la doc concernant les items](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/items_lookup.html)
+
 [Lien vers la doc concernant les differents types de boucle](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_loops.html)
+
 [Lien vers la doc concernant les lookups](https://docs.ansible.com/ansible/latest/plugins/lookup.html)
 
 > [!NOTE]
