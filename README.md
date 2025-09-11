@@ -28,7 +28,12 @@
     - [Exemple d'utilisation du module file](#exemple-dutilisation-du-module-file)
   - [Le module `user`](#le-module-user)
     - [Quelques options utiles du module `user`](#quelques-options-utiles-du-module-user)
-    - [Quelques exemple de l'utilsation du module `user`](#quelques-exemple-de-lutilsation-du-module-user)
+    - [Quelques exemple de l'utilisation du module `user`](#quelques-exemple-de-lutilisation-du-module-user)
+  - [Les `register` et le module `stat`](#les-register-et-le-module-stat)
+    - [Les options utiles du module `stat`](#les-options-utiles-du-module-stat)
+    - [Exemple d'utilisation du module `stat` avec un `register`](#exemple-dutilisation-du-module-stat-avec-un-register)
+    - [Quelques notes a propos des `registers`](#quelques-notes-a-propos-des-registers)
+  - [Les boucles : `with_items` et autres](#les-boucles--with_items-et-autres)
 
 ## Documentations
 
@@ -715,9 +720,328 @@ Le module `user` permet de creer des utilisateurs et de les gerer.
 - `name` : nom de l'utilisateur a creer ou modifier ou supprimer.
 - `password` : mot de passe de l'utilisateur si fourni. **On doit mettre le hash**. Le module vault nous permettra de mieux gerer cet aspect pour ne pas mettre demot de passe en dur.
 - `remove` : Ne fonctionne qu'avec `state=absent`. Tente de supprimer les dossiers appartenent a l'utilisateur en cas de suppression de ce dernier.
+- `state` : Specifie si un compte devrait exister ou non, permettant de determiner une action si le resultat est different de ce qui est assume.
 - `shell` : Option qui permet de configurer le shell. Pour les compte systeme, on peut mettre /usr/bin/false si cela est accepte. Le comportement par defaut de cette option depend de la commande utilisee en sous main.
 - `system` : determine si un compte est un compte systeme ou non (uid < 1000).
 - `umask` : met en place le umask par defaut de lutilisateur. Ne foncitonne que sur linux.
 
-### Quelques exemple de l'utilsation du module `user`
+### Quelques exemple de l'utilisation du module `user`
 
+Voici un YAML simple :
+
+```yaml
+- name: "Exemple de creation - modification - suppression d'un utilisateur"
+  hosts: scaleway_srv
+  tasks:
+    - name: "Ajout d'un utilisateur 'wordpress_user'"
+      ansible.builtin.user:
+        name: 'wordpress_user'
+        state: present
+        groups: 'sudo'
+        system: true
+        create_home: false
+        password: "{{ 'password' | password_hash('sha512') }}" # ne JAMAIS faire ca IRL
+      register: create_user_output # permet de recup le retour
+    - name: "Test d'existence du user 'wordpress_user'"
+      ansible.builtin.debug:
+        var: create_user_output
+```
+
+Et le resultat :
+
+```bash
+ansible-playbook -i recette/inventory recette/playbook/playbook.module.user.yml
+
+<SNIP>
+TASK [Test d'existence du user 'wordpress_user'] *********************************************************************************************************************************************************
+Thursday 11 September 2025  15:53:59 +0200 (0:00:00.626)       0:00:04.226 **** 
+Thursday 11 September 2025  15:53:59 +0200 (0:00:00.626)       0:00:04.226 **** 
+ok: [cloud-1] => {
+    "create_user_output": {
+        "append": false,
+        "changed": true,
+        "comment": "",
+        "failed": false,
+        "group": 998,
+        "groups": "sudo",
+        "home": "/home/wordpress_user",
+        "move_home": false,
+        "name": "wordpress_user",
+        "password": "NOT_LOGGING_PASSWORD",
+        "shell": "/bin/sh",
+        "state": "present",
+        "uid": 998
+    }
+}
+```
+
+Et voici le meme yaml, mais pour lquel on supprime l'utilisateur par la suite :
+
+```yaml
+- name: "Exemple de creation - modification - suppression d'un utilisateur"
+  hosts: scaleway_srv
+  tasks:
+    - name: "Ajout d'un utilisateur 'wordpress_user'"
+      ansible.builtin.user:
+        name: 'wordpress_user'
+        state: present
+        groups: 'sudo'
+        system: true
+        create_home: false
+        password: "{{ 'password' | password_hash('sha512') }}" # ne JAMAIS faire ca IRL
+      register: create_user_output # permet de recup le retour
+    - name: "Test d'existence du user 'wordpress_user'"
+      ansible.builtin.debug:
+        var: create_user_output
+    - name: "Suppression d'un utilisateur 'wordpress_user'"
+      ansible.builtin.user:
+        name: 'wordpress_user'
+        state: absent
+        system: true
+        remove: true
+        force: true
+      register: delete_user_output # permet de recup le retour
+    - name: "Test d'existence du user 'wordpress_user'"
+      ansible.builtin.debug:
+        var: delete_user_output
+```
+
+Resulat, l'utilisateur est bien supprime :
+
+```bash
+ansible-playbook -i recette/inventory recette/playbook/playbook.module.user.yml
+
+<SNIP>
+TASK [Test d'existence du user 'wordpress_user'] *********************************************************************************************************************************************************
+Thursday 11 September 2025  16:01:02 +0200 (0:00:00.663)       0:00:12.743 **** 
+Thursday 11 September 2025  16:01:02 +0200 (0:00:00.663)       0:00:12.743 **** 
+ok: [cloud-1] => {
+    "create_user_output": {
+        "append": false,
+        "changed": true,
+        "comment": "",
+        "failed": false,
+        "group": 998,
+        "groups": "sudo",
+        "home": "/home/wordpress_user",
+        "move_home": false,
+        "name": "wordpress_user",
+        "password": "NOT_LOGGING_PASSWORD",
+        "shell": "/bin/sh",
+        "state": "present",
+        "uid": 998
+    }
+}
+
+TASK [Suppression d'un utilisateur 'wordpress_user'] *****************************************************************************************************************************************************
+Thursday 11 September 2025  16:01:02 +0200 (0:00:00.024)       0:00:12.767 **** 
+Thursday 11 September 2025  16:01:02 +0200 (0:00:00.024)       0:00:12.767 **** 
+changed: [cloud-1]
+
+TASK [Test d'existence du user 'wordpress_user'] *********************************************************************************************************************************************************
+Thursday 11 September 2025  16:01:03 +0200 (0:00:00.615)       0:00:13.383 **** 
+Thursday 11 September 2025  16:01:03 +0200 (0:00:00.615)       0:00:13.383 **** 
+ok: [cloud-1] => {
+    "delete_user_output": {
+        "changed": true,
+        "failed": false,
+        "force": true,
+        "name": "wordpress_user",
+        "remove": true,
+        "state": "absent",
+        "stderr": "userdel: wordpress_user mail spool (/var/mail/wordpress_user) not found\nuserdel: wordpress_user home directory (/home/wordpress_user) not found\n",
+        "stderr_lines": [
+            "userdel: wordpress_user mail spool (/var/mail/wordpress_user) not found",
+            "userdel: wordpress_user home directory (/home/wordpress_user) not found"
+        ]
+    }
+}
+```
+
+## Les `register` et le module `stat`
+
+[Lien vers le doc du module stat](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/stat_module.html)
+[Lien vers la doc des registers](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_variables.html#registering-variables)
+
+Le module stat est un module qui agit comme la commande `stat` sur linux.
+
+Un `register` permet de recuperer sous une variable l'output et d'autres donnees d'une `task` donnee.
+
+### Les options utiles du module `stat`
+
+- `path` : le chemin du fichier qu'on souhaite tester
+- `follow` : suivre ou non les symlinks
+- `get_checksum` : retourner ou non le checksum (`true` / `false`)
+- `get_mime` : retourner ou non le mime type (`true` / `false`)
+
+### Exemple d'utilisation du module `stat` avec un `register`
+
+Voici un fichier YAML tres simple qui cree puis supprime un fichier, tout en permettant de voir l'effectivite de ces actions.
+
+```yaml
+- name: Playbook pour tester le module file
+  hosts: scaleway_srv
+  remote_user: root
+  tasks:
+    - name: "Creation du fichier 'fichiertest'"
+      ansible.builtin.file:
+        mode: '644'
+        path: '/tmp/fichiertest'
+        owner: root
+        group: root
+        state: touch
+    - name: "Verification de l'existence du fichier 'fichiertest'"
+      ansible.builtin.stat:
+        path: "/tmp/fichiertest"
+      register: stat_output # permet de recup le retour
+    - name: Debug de stat
+      ansible.builtin.debug:
+        var: stat_output
+    - name: "Suppression du fichier 'fichiertest'"
+      ansible.builtin.file:
+        path: '/tmp/fichiertest'
+        state: absent
+    - name: "Verification de l'absence du fichier 'fichiertest'"
+      ansible.builtin.stat:
+        path: "/tmp/fichiertest"
+      register: stat_delete_output # permet de recup le retour
+    - name: Debug de stat
+      ansible.builtin.debug:
+        var: stat_delete_output
+```
+
+Resultat, on constate bien la presence et enfin l'absence du fichier :
+
+```bash
+TASK [Debug de stat] *************************************************************************************************************************************************************************************
+Thursday 11 September 2025  16:32:28 +0200 (0:00:00.473)       0:00:02.218 **** 
+Thursday 11 September 2025  16:32:28 +0200 (0:00:00.473)       0:00:02.218 **** 
+ok: [cloud-1] => {
+    "stat_output": {
+        "changed": false,
+        "failed": false,
+        "stat": {
+            "atime": 1757601148.1103199,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 0,
+            "charset": "binary",
+            "checksum": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            "ctime": 1757601148.1103199,
+            "dev": 64513,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 12410,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "inode/x-empty",
+            "mode": "0644",
+            "mtime": 1757601148.1103199,
+            "nlink": 1,
+            "path": "/tmp/fichiertest",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 0,
+            "uid": 0,
+            "version": "1346125600",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    }
+}
+
+TASK [Suppression du fichier 'fichiertest'] **************************************************************************************************************************************************************
+Thursday 11 September 2025  16:32:28 +0200 (0:00:00.030)       0:00:02.249 **** 
+Thursday 11 September 2025  16:32:28 +0200 (0:00:00.030)       0:00:02.249 **** 
+changed: [cloud-1]
+
+TASK [Verification de l'absence du fichier 'fichiertest'] ************************************************************************************************************************************************
+Thursday 11 September 2025  16:32:29 +0200 (0:00:00.341)       0:00:02.590 **** 
+Thursday 11 September 2025  16:32:29 +0200 (0:00:00.341)       0:00:02.590 **** 
+ok: [cloud-1]
+
+TASK [Debug de stat] *************************************************************************************************************************************************************************************
+Thursday 11 September 2025  16:32:29 +0200 (0:00:00.376)       0:00:02.967 **** 
+Thursday 11 September 2025  16:32:29 +0200 (0:00:00.377)       0:00:02.967 **** 
+ok: [cloud-1] => {
+    "stat_delete_output": {
+        "changed": false,
+        "failed": false,
+        "stat": {
+            "exists": false
+        }
+    }
+}
+```
+
+### Quelques notes a propos des `registers`
+
+On peut recuperer les cles et les valeurs d'une variable.
+
+Par exemple pour `stat`, nous constatons dans le debug que :
+
+```json
+"stat": {
+            "exists": false
+        }
+```
+
+On peut acc2der a cette donnee -et tout autre donnee qui peut exister, ainsi dans le module debug :
+
+```YAML
+ansible.builtin.debug:
+  msg: "Le fichier existe ? Resultat : {{ monregister.stat.exists }}"
+```
+
+Et cela nous retournera ou non la presence du fichier :
+
+```bash
+<SNIP>
+ok: [cloud-1] => {}
+
+MSG:
+
+Le fichier existe ? Resultat : False
+<SNIP>
+```
+
+On peut aussi rajouter des conditions grace a cela :
+
+```yaml
+ansible.builtin.file:
+  path: /tmp/test
+  state: touch
+when: monregister.stat.exists == True
+```
+
+Ainsi le fichier test ne sera cree que si le retour du module `stat` sur un fichier/dossier donne retourne `true` pour la cle `exists`.
+
+## Les boucles : `with_items` et autres
+
+[Lien vers la doc concernant les items](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/items_lookup.html)
+[Lien vers la doc concernant les differents types de boucle](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_loops.html)
+[Lien vers la doc concernant les lookups](https://docs.ansible.com/ansible/latest/plugins/lookup.html)
+
+> [!NOTE]
+> [La video de xavki](https://www.youtube.com/watch?v=Iyw_s61sDmU&list=PLn6POgpklwWoCpLKOSw3mXCqbRocnhrh-&index=18) concernant les boucles ne semble pas parler de la nouvelle facon de faire des boucles, qui offre une maniere plus fine de les controler. Cependant, les `with_<lookup_name>` sont toujours d'actualite et, a l'heure d'ecrire ce doument (09-2025), n'est pas prevue pour etre depreciee par les devs d'ansible.

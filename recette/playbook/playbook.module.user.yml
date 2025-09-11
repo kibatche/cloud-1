@@ -1,0 +1,26 @@
+- name: "Exemple de creation - modification - suppression d'un utilisateur"
+  hosts: scaleway_srv
+  tasks:
+    - name: "Ajout d'un utilisateur 'wordpress_user'"
+      ansible.builtin.user:
+        name: 'wordpress_user'
+        state: present
+        groups: 'sudo'
+        system: true
+        create_home: false
+        password: "{{ 'password' | password_hash('sha512') }}" # ne JAMAIS faire ca IRL
+      register: create_user_output # permet de recup le retour
+    - name: "Test d'existence du user 'wordpress_user'"
+      ansible.builtin.debug:
+        var: create_user_output
+    - name: "Suppression d'un utilisateur 'wordpress_user'"
+      ansible.builtin.user:
+        name: 'wordpress_user'
+        state: absent
+        system: true
+        remove: true
+        force: true
+      register: delete_user_output # permet de recup le retour
+    - name: "Test d'existence du user 'wordpress_user'"
+      ansible.builtin.debug:
+        var: delete_user_output

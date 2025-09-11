@@ -1,0 +1,29 @@
+- name: Playbook pour tester le module file
+  hosts: scaleway_srv
+  remote_user: root
+  tasks:
+    - name: "Creation du fichier 'fichiertest'"
+      ansible.builtin.file:
+        mode: '644'
+        path: '/tmp/fichiertest'
+        owner: root
+        group: root
+        state: touch
+    - name: "Verification de l'existence du fichier 'fichiertest'"
+      ansible.builtin.stat:
+        path: "/tmp/fichiertest"
+      register: stat_output # permet de recup le retour
+    - name: Debug de stat
+      ansible.builtin.debug:
+        var: stat_output
+    - name: "Suppression du fichier 'fichiertest'"
+      ansible.builtin.file:
+        path: '/tmp/fichiertest'
+        state: absent
+    - name: "Verification de l'absence du fichier 'fichiertest'"
+      ansible.builtin.stat:
+        path: "/tmp/fichiertest"
+      register: stat_delete_output # permet de recup le retour
+    - name: Debug de stat
+      ansible.builtin.debug:
+        msg: "Le fichier existe ? Resultat : {{ stat_delete_output.stat.exists }}"
