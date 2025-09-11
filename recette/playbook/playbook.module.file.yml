@@ -2,10 +2,22 @@
   hosts: scaleway_srv
   remote_user: root
   tasks:
-    - name: "Un debug"
+    - name: "Creation du dossier dossier_de_test"
       ansible.builtin.file:
         mode: '644'
         path: '/tmp/dossier_de_test'
         owner: root
         group: root
         state: directory
+    - name: "Verification de l'existence du dossier 'dossier_de_test'"
+      ansible.builtin.command: "stat '/tmp/dossier_de_test'"
+      register: stat_output # permet de recup le retour
+      changed_when: false # determine quand un etat a change -> https://ansible.readthedocs.io/projects/lint/rules/no-changed-when/
+    - name: "Suppression du dossier dossier_de_test"
+      ansible.builtin.file:
+        path: '/tmp/dossier_de_test'
+        state: absent
+    - name: "Verification de l'absence du dossier 'dossier_de_test'"
+      ansible.builtin.command: "stat '/tmp/dossier_de_test'"
+      register: stat_output # permet de recup le retour
+      changed_when: false # determine quand un etat a change -> https://ansible.readthedocs.io/projects/lint/rules/no-changed-when/

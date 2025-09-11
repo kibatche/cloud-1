@@ -11,7 +11,7 @@
     - [`Plugins`](#plugins)
   - [Bonnes pratiques et tips](#bonnes-pratiques-et-tips)
   - [Le fichier de configuration](#le-fichier-de-configuration)
-    - [Le fichier ansible.cfg](#le-fichier-ansiblecfg)
+    - [Le fichier `ansible.cfg`](#le-fichier-ansiblecfg)
     - [Le cli `ansible-config`](#le-cli-ansible-config)
   - [Le cli `ansible`](#le-cli-ansible)
     - [Introduction](#introduction)
@@ -123,7 +123,7 @@ On peut configurer ansible soit :
 - *via* le cli `ansible-config`
 - soit *via* l fichier ansible.cfg
 
-### Le fichier ansible.cfg
+### Le fichier `ansible.cfg`
 
 On peut mettre le fichier de configuration dans:
 
@@ -501,5 +501,196 @@ ok: [cloud-1]
 
 PLAY RECAP ***********************************************************************************************************************************************************************************************
 cloud-1                    : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0 
+```
+
+Avec la commade suivante, on peut tester l'existence du dossier `dossier_de_test` :
+
+```bash
+ansible -i "cloud-1," all -m command -a "stat /tmp/dossier_de_test" 
+cloud-1 | CHANGED | rc=0 >>
+  File: /tmp/dossier_de_test
+  Size: 4096            Blocks: 8          IO Block: 4096   directory
+Device: fc01h/64513d    Inode: 288934      Links: 2
+Access: (0644/drw-r--r--)  Uid: (    0/    root)   Gid: (    0/    root)
+Access: 2025-09-11 11:54:30.980112315 +0000
+Modify: 2025-09-11 11:45:56.844328020 +0000
+Change: 2025-09-11 11:45:56.844328020 +0000
+ Birth: 2025-09-11 11:45:56.844328020 +0000
+```
+
+Nous voyons que le dossier a bien ete cree avec les bons droits (droits `rwx` pour l'owner et `r` pour le groupeainsi que le reste du monde).
+
+Voici le meme `playbook` avec la suppression du dossier tout juste cree et verification de sa presence :
+
+```yaml
+- name: Playbook pour tester le module file
+  hosts: scaleway_srv
+  remote_user: root
+  tasks:
+    - name: "Creation du dossier dossier_de_test"
+      ansible.builtin.file:
+        mode: '644'
+        path: '/tmp/dossier_de_test'
+        owner: root
+        group: root
+        state: directory
+    - name: "Verification de l'existence du dossier 'dossier_de_test'"
+      ansible.builtin.command: "stat '/tmp/dossier_de_test'"
+      register: stat_output # permet de recup le retour
+      changed_when: false # determine quand un etat a change -> https://ansible.readthedocs.io/projects/lint/rules/no-changed-when/
+    - name: "Suppression du dossier dossier_de_test"
+      ansible.builtin.file:
+        path: '/tmp/dossier_de_test'
+        state: absent
+    - name: "Verification de l'absence du dossier 'dossier_de_test'"
+      ansible.builtin.command: "stat '/tmp/dossier_de_test'"
+      register: stat_output # permet de recup le retour par exemple avec debug stat_output.stdout_lines stat_output.stderr_lines
+      changed_when: false # determine quand un etat a change -> https://ansible.readthedocs.io/projects/lint/rules/no-changed-when/
+```
+
+On lance la commande suivante :
+
+```bash
+ansible-playbook -i recette/inventory recette/playbook/playbook.module.file.yml
+
+PLAY [Playbook pour tester le module file] ***************************************************************************************************************************************************************
+
+TASK [Gathering Facts] ***********************************************************************************************************************************************************************************
+Thursday 11 September 2025  14:27:36 +0200 (0:00:00.005)       0:00:00.005 **** 
+Thursday 11 September 2025  14:27:36 +0200 (0:00:00.004)       0:00:00.004 **** 
+ok: [cloud-1]
+
+TASK [Creation du dossier dossier_de_test] ***************************************************************************************************************************************************************
+Thursday 11 September 2025  14:27:38 +0200 (0:00:01.961)       0:00:01.966 **** 
+Thursday 11 September 2025  14:27:38 +0200 (0:00:01.961)       0:00:01.966 **** 
+changed: [cloud-1]
+
+TASK [Verification de l'existence du dossier 'dossier_de_test'] ******************************************************************************************************************************************
+Thursday 11 September 2025  14:27:38 +0200 (0:00:00.426)       0:00:02.393 **** 
+Thursday 11 September 2025  14:27:38 +0200 (0:00:00.426)       0:00:02.393 **** 
+ok: [cloud-1]
+
+TASK [Suppression du dossier dossier_de_test] ************************************************************************************************************************************************************
+Thursday 11 September 2025  14:27:39 +0200 (0:00:00.405)       0:00:02.799 **** 
+Thursday 11 September 2025  14:27:39 +0200 (0:00:00.406)       0:00:02.799 **** 
+changed: [cloud-1]
+
+TASK [Verification de l'absence du dossier 'dossier_de_test'] ********************************************************************************************************************************************
+Thursday 11 September 2025  14:27:39 +0200 (0:00:00.380)       0:00:03.180 **** 
+Thursday 11 September 2025  14:27:39 +0200 (0:00:00.380)       0:00:03.180 **** 
+fatal: [cloud-1]: FAILED! => {
+    "changed": false,
+    "cmd": [
+        "stat",
+        "/tmp/dossier_de_test"
+    ],
+    "delta": "0:00:00.003073",
+    "end": "2025-09-11 12:27:39.778541",
+    "rc": 1,
+    "start": "2025-09-11 12:27:39.775468"
+}
+
+STDERR:
+
+stat: cannot statx '/tmp/dossier_de_test': No such file or directory
+
+
+MSG:
+
+non-zero return code
+```
+
+On constate que la commande `stat` n'a pas fonctionne. Cela veut dire que le dossier a bien ete supprime.
+
+Voici un exemple complet venant du site d'ansible :
+
+```yaml
+- name: Change file ownership, group and permissions
+  ansible.builtin.file:
+    path: /etc/foo.conf
+    owner: foo
+    group: foo
+    mode: '0644'
+
+- name: Give insecure permissions to an existing file
+  ansible.builtin.file:
+    path: /work
+    owner: root
+    group: root
+    mode: '1777'
+
+- name: Create a symbolic link
+  ansible.builtin.file:
+    src: /file/to/link/to
+    dest: /path/to/symlink
+    owner: foo
+    group: foo
+    state: link
+
+- name: Create two hard links
+  ansible.builtin.file:
+    src: '/tmp/{{ item.src }}'
+    dest: '{{ item.dest }}'
+    state: hard
+  loop:
+    - { src: x, dest: y }
+    - { src: z, dest: k }
+
+- name: Touch a file, using symbolic modes to set the permissions (equivalent to 0644)
+  ansible.builtin.file:
+    path: /etc/foo.conf
+    state: touch
+    mode: u=rw,g=r,o=r
+
+- name: Touch the same file, but add/remove some permissions
+  ansible.builtin.file:
+    path: /etc/foo.conf
+    state: touch
+    mode: u+rw,g-wx,o-rwx
+
+- name: Touch again the same file, but do not change times this makes the task idempotent
+  ansible.builtin.file:
+    path: /etc/foo.conf
+    state: touch
+    mode: u+rw,g-wx,o-rwx
+    modification_time: preserve
+    access_time: preserve
+
+- name: Create a directory if it does not exist
+  ansible.builtin.file:
+    path: /etc/some_directory
+    state: directory
+    mode: '0755'
+
+- name: Update modification and access time of given file
+  ansible.builtin.file:
+    path: /etc/some_file
+    state: file
+    modification_time: now
+    access_time: now
+
+- name: Set access time based on seconds from epoch value
+  ansible.builtin.file:
+    path: /etc/another_file
+    state: file
+    access_time: '{{ "%Y%m%d%H%M.%S" | strftime(stat_var.stat.atime) }}'
+
+- name: Recursively change ownership of a directory
+  ansible.builtin.file:
+    path: /etc/foo
+    state: directory
+    recurse: yes
+    owner: foo
+    group: foo
+
+- name: Remove file (delete file)
+  ansible.builtin.file:
+    path: /etc/foo.txt
+    state: absent
+
+- name: Recursively remove directory
+  ansible.builtin.file:
+    path: /etc/foo
+    state: absent
 ```
 
