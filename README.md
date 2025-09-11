@@ -3,12 +3,12 @@
 - [cloud-1 - Ansible](#cloud-1---ansible)
   - [Documentations](#documentations)
   - [Concepts](#concepts)
-    - [Control-node](#control-node)
-    - [Managed nodes](#managed-nodes)
-    - [Inventory](#inventory)
-    - [Playbooks](#playbooks)
-    - [Modules](#modules)
-    - [Plugins](#plugins)
+    - [`Control-node`](#control-node)
+    - [`Managed nodes`](#managed-nodes)
+    - [`Inventory`](#inventory)
+    - [`Playbooks`](#playbooks)
+    - [`Modules`](#modules)
+    - [`Plugins`](#plugins)
   - [Bonnes pratiques et tips](#bonnes-pratiques-et-tips)
   - [Le fichier de configuration](#le-fichier-de-configuration)
     - [Le fichier ansible.cfg](#le-fichier-ansiblecfg)
@@ -17,11 +17,11 @@
     - [Introduction](#introduction)
     - [Quelques options a connaitre](#quelques-options-a-connaitre)
     - [Les modules](#les-modules)
-  - [L'inventory](#linventory)
+  - [L'`inventory`](#linventory)
     - [Qu'est-ce que c'est ?](#quest-ce-que-cest-)
     - [Le fichier d'inventaire](#le-fichier-dinventaire)
     - [Hierarchisation d'un projet ansible](#hierarchisation-dun-projet-ansible)
-  - [Le playbook](#le-playbook)
+  - [Le `playbook`](#le-playbook)
     - [Quelques options](#quelques-options)
     - [Exemple d'un simple playbook avec le module debug](#exemple-dun-simple-playbook-avec-le-module-debug)
   - [Le module `file`](#le-module-file)
@@ -35,23 +35,23 @@ Les videos tres completes de xavki sur youtube : [lien](https://www.youtube.com/
 
 ## Concepts
 
-### Control-node
+### `Control-node`
 
 La machine sur laquelle est installee le cli ansible (`ansible-playbook`, `ansible`, `ansible-vault`). Cela peut etre n'importe quel ordinateur avec les specifications necessaires.
 
-### Managed nodes
+### `Managed nodes`
 
 On parle aussi de `hosts`. Ce sont les machines cibles, comme un serveur par exemple, qui vont etre gerees par ansible.
 
 Ansible n'est normalement pas installe sur ces machines, sauf cas specifiques et deconseilles.
 
-### Inventory
+### `Inventory`
 
 Une liste de `managed nodes` provisionnes par l'intermediaire d'une ou plusieurs `inventory sources`. L'inventaire peut servir a specifier differentes informations sur differents nodes, par exemple l'adresse IP. Il peut etre egalement utilise pour assigne des groupes, aui permet aussi bien de selectionner des nodes dans les `plays` que de gerer l'assignement des variables au sein des blocs (bulk assignement, a checker ce que c'est exactement).
 
 Les fichiers sources des `inventory` peut aussi etre denomme par `hostfile`.
 
-### Playbooks
+### `Playbooks`
 
 Ils contiennent les `Plays`, qui sont les unites basiques des executions operees par ansible. C'est aussi bien une notion abstraite d'execution que la description des fichiers sur lesquelles `ansible-playbook` opere.
 
@@ -62,11 +62,11 @@ Les `playbooks` sont ecrits en YAML afin de faciliter leur lecture.
   - `Tasks` : La deifnition d'une action a appliquer sur un hote gere. Il est possible d'executer une seule tache par l'intermediaire d'un commande cree pour en utilisant `ansible` ou `ansible-console`.
   - `Handlers` : Une forme specifique de `task`, qui ne s'execute qu'une fois notifiee par une tache precedente qui a eu pour resultat un changement de statut (`changed status`).
 
-### Modules
+### `Modules`
 
 Le code ou les binaires que ansible copie ou execute au sein des `managed nodes` - au besoin - afin d'accomplir une action specifique deifnie au sein d'une `Task`.
 
-### Plugins
+### `Plugins`
 
 Morceaux de code qui etendent les capacites d'Ansible. 
 
@@ -225,7 +225,7 @@ ansible -i "cloud-1," all -m copy -a "src:/chemin/vers/fichier/distant dest:le_c
 ansible -i "cloud-1," all -m setup
 ```
 
-## L'inventory
+## L'`inventory`
 
 ### Qu'est-ce que c'est ?
 
@@ -321,7 +321,7 @@ On peut appliquer la hierarchie suivante :
 > [!TIP]
 > Le fait de ranger les fichiers et dossiers dans un super dossier de type `recette`, `prod` etc permet de facilement lancer telle ou telle tache selon ce qu'on souhaite avec `ansible -i prod` par exemple pour lancer les commandes de production.
 
-## Le playbook
+## Le `playbook`
 
 [Lien vers la doc.](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html#ansible-playbooks)
 
