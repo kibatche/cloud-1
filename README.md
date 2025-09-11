@@ -23,7 +23,9 @@
     - [Hierarchisation d'un projet ansible](#hierarchisation-dun-projet-ansible)
   - [Le playbook](#le-playbook)
     - [Quelques options](#quelques-options)
+    - [Exemple d'un simple playbook avec le module debug](#exemple-dun-simple-playbook-avec-le-module-debug)
   - [Le module `file`](#le-module-file)
+    - [Exemple d'utilisation du module file](#exemple-dutilisation-du-module-file)
 
 ## Documentations
 
@@ -321,15 +323,17 @@ On peut appliquer la hierarchie suivante :
 
 ## Le playbook
 
+[Lien vers la doc.](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html#ansible-playbooks)
+
 Le playbook sert a plusieurs choses, mais principalement :
 
-- a declencher les action a realiser
+- a declencher les actions a realiser
 - a articuler l'inventory - cad les machines gerees (managed nodes) - avec les roles, cad les actions a executer
 - a executer des tasks. **C'est une mauvaise pratique a eviter**
 - inclure des variables. **C'est une mauvaise pratique a eviter**
 - specifier un utilisateur particulier et sa maniere d'interagir avec les tasks
 
-La commande utilisee pour les `playbooks` est `ansible-playbooks`
+La commande utilisee pour les `playbooks` est `ansible-playbooks`.
 
 ### Quelques options
 
@@ -352,7 +356,9 @@ La commande utilisee pour les `playbooks` est `ansible-playbooks`
 - `--list-tags` : liste les tags
 - `--list-task` : liste les taches qui vont etre executees
 
-VOici un playbook possible :
+### Exemple d'un simple playbook avec le module debug
+
+Voici un playbook possible :
 
 ```yaml
 - name: Playbook de test ftw
@@ -396,7 +402,7 @@ L'arbre des fichiers est le suivant :
 On peut executer le playbook avec la commande suivante :
 
 ```bash
-➜  cloud-1 git:(main) ansible-playbook -i recette/inventory recette/playbook/playbook.yml -e "var1=yoyo"      
+➜  cloud-1 git:(main) ansible-playbook -i recette/inventory recette/playbook/playbook.simple.yml -e "var1=yoyo"      
 
 PLAY [Playbook de test ftw] ******************************************************************************************************************************************************************************
 
@@ -447,3 +453,53 @@ Quelques options utiles tout le temps :
     - `hard`
     - `link`
     - `touch`
+
+### Exemple d'utilisation du module file
+
+> [!NOTE]
+> Ce `playbook` ne respecte pas les bonnes pratiques, car il execute une tache. Il est ici a titre d'exemple.
+
+Voici le `playbook` :
+
+```yaml
+- name: Playbook pour tester le module file
+  hosts: scaleway_srv
+  remote_user: root
+  tasks:
+    - name: "Un debug"
+      ansible.builtin.file:
+        mode: '644'
+        path: '/tmp/dossier_de_test'
+        owner: root
+        group: root
+        state: directory
+```
+
+Voici l'`inventory` :
+
+```yaml
+scaleway_srv:
+  hosts:
+    cloud-1:
+vm_srv:
+  hosts:
+    cloud-2:
+```
+
+On peut lancer la commande suivante :
+
+```bash
+ansible-playbook -i recette/inventory recette/playbook/playbook.module.file.yml
+
+PLAY [Playbook pour tester le module file] ***************************************************************************************************************************************************************
+
+TASK [Gathering Facts] ***********************************************************************************************************************************************************************************
+ok: [cloud-1]
+
+TASK [Un debug] ******************************************************************************************************************************************************************************************
+ok: [cloud-1]
+
+PLAY RECAP ***********************************************************************************************************************************************************************************************
+cloud-1                    : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0 
+```
+

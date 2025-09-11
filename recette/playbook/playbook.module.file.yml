@@ -1,0 +1,11 @@
+- name: Playbook pour tester le module file
+  hosts: scaleway_srv
+  remote_user: root
+  tasks:
+    - name: "Un debug"
+      ansible.builtin.file:
+        mode: '644'
+        path: '/tmp/dossier_de_test'
+        owner: root
+        group: root
+        state: directory
