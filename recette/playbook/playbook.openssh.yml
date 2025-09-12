@@ -1,0 +1,11 @@
+- name: "Playbook OpenSSH"
+  hosts: scaleway_srv
+  strategy: linear
+  remote_user: root
+  tasks:
+    - name: "Generation de cle ssh"
+      community.crypto.openssh_keypair:
+        path: '/tmp/testssh'
+        state: 'present'
+      delegate_to: localhost
+      run_once: true

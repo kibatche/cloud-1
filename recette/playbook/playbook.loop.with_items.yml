@@ -1,0 +1,61 @@
+- name: Boucle with_item
+  hosts: scaleway_srv
+  remote_user: root
+  tasks:
+    - name: "Creation de repertoire"
+      ansible.builtin.file:
+        state: directory
+        recurse: true
+        path: "/tmp/{{ item }}"
+      with_items:
+        - test1
+        - test2
+        - test3
+    - name: "Stat sur les dossiers crees"
+      ansible.builtin.stat:
+        path: "/tmp/{{ item }}"
+      with_items:
+        - test1
+        - test2
+        - test3
+      register: __directory_loop_creation
+    - name: "Debug du stat"
+      ansible.builtin.debug:
+        var: __directory_loop_creation
+    - name: "Suppression de repertoire"
+      ansible.builtin.file:
+        state: absent
+        path: "/tmp/{{ item }}"
+      with_items:
+        - test1
+        - test2
+        - test3
+    - name: "Stat sur les dossiers supprimes"
+      ansible.builtin.stat:
+        path: "/tmp/{{ item }}"
+      with_items:
+        - test1
+        - test2
+        - test3
+      register: __directory_loop_deletion
+    - name: "Debug du stat"
+      ansible.builtin.debug:
+        var: __directory_loop_deletion
+    - name: With_items -> loop
+      ansible.builtin.file:
+        state: directory
+        recurse: true
+        path: "/tmp/{{ item }}"
+      loop: "{{ ['test1', 'test2', 'test3'] | flatten(levels=1) }}"
+    - name: "Creation de repertoire avec cle:valeur"
+      ansible.builtin.file:
+        state: directory
+        recurse: true
+        path: "/tmp/{{ item.dir1 }}/{{ item.dir2 }}"
+      loop: "{{ directory_list }}"
+    - name: "Creation de repertoire avec cle:valeur de l'inventory"
+      ansible.builtin.file:
+        state: directory
+        recurse: true
+        path: "/tmp/{{ item }}"
+      loop: "{{ groups['all'] }}"
