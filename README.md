@@ -33,7 +33,23 @@
     - [Les options utiles du module `stat`](#les-options-utiles-du-module-stat)
     - [Exemple d'utilisation du module `stat` avec un `register`](#exemple-dutilisation-du-module-stat-avec-un-register)
     - [Quelques notes a propos des `registers`](#quelques-notes-a-propos-des-registers)
-  - [Les boucles : `with_items` et autres](#les-boucles--with_items-et-autres)
+  - [Les boucles : `with_items` et boucles `loop`](#les-boucles--with_items-et-boucles-loop)
+    - [Les boucles `with_<lookup_name>`](#les-boucles-with_lookup_name)
+    - [Exemples d'utilisation des boucles `with_`](#exemples-dutilisation-des-boucles-with_)
+    - [Acces a des elements de l'`inventory`](#acces-a-des-elements-de-linventory)
+  - [Le module `apt`](#le-module-apt)
+    - [Quelques options utiles du module `apt`](#quelques-options-utiles-du-module-apt)
+    - [exemple de l'utilisation du module `apt`](#exemple-de-lutilisation-du-module-apt)
+    - [Redemarrage du serveur grace au module `reboot`](#redemarrage-du-serveur-grace-au-module-reboot)
+  - [Gestion des cles SSH avec les modules `ansible.posix.authorized_key` et `community.crypto.openssh_keypair`](#gestion-des-cles-ssh-avec-les-modules-ansibleposixauthorized_key-et-communitycryptoopenssh_keypair)
+    - [Quelques options utiles du modules `openssh_keypair`](#quelques-options-utiles-du-modules-openssh_keypair)
+    - [Exemple d'utilisation du module `openssh_keypair`](#exemple-dutilisation-du-module-openssh_keypair)
+    - [Quelques options utiles du module `authorized_key`](#quelques-options-utiles-du-module-authorized_key)
+    - [Exemple d'utilisation du module `authorized_key`](#exemple-dutilisation-du-module-authorized_key)
+  - [`delegate_to`, `run_once`, `local`, `local_action`](#delegate_to-run_once-local-local_action)
+    - [Exemple de delegation](#exemple-de-delegation)
+    - [Exemple d'une `local_action`](#exemple-dune-local_action)
+    - [Exemple de `run_once`](#exemple-de-run_once)
 
 ## Documentations
 
@@ -1037,7 +1053,7 @@ when: monregister.stat.exists == True
 
 Ainsi le fichier test ne sera cree que si le retour du module `stat` sur un fichier/dossier donne retourne `true` pour la cle `exists`.
 
-## Les boucles : `with_items` et autres
+## Les boucles : `with_items` et boucles `loop`
 
 [Lien vers la doc concernant les items](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/items_lookup.html)
 
@@ -1047,3 +1063,531 @@ Ainsi le fichier test ne sera cree que si le retour du module `stat` sur un fich
 
 > [!NOTE]
 > [La video de xavki](https://www.youtube.com/watch?v=Iyw_s61sDmU&list=PLn6POgpklwWoCpLKOSw3mXCqbRocnhrh-&index=18) concernant les boucles ne semble pas parler de la nouvelle facon de faire des boucles, qui offre une maniere plus fine de les controler. Cependant, les `with_<lookup_name>` sont toujours d'actualite et, a l'heure d'ecrire ce doument (09-2025), n'est pas prevue pour etre depreciee par les devs d'ansible.
+
+Nous allons aborder ici les deux facons de faire.
+
+### Les boucles `with_<lookup_name>`
+
+La liste des boucles `with_` :
+
+- `with_item` : boucle a partir de liste de dictionnaire
+- `with_nested` : boucle sur des listes de liste
+- `with_dict` : boucle sur les dictionnaires
+- `with_fileglob` : boucle sur des fichiers avec pattern glob (ie, `*.txt`).Non recursif
+- `with_filetree` : boucle sur une arborescence avec pattern selon des criteres
+- `with_together` : boucle sur deux listes croisees en parallele
+- `with_sequence` : boucle avec un interval etc.
+- `with_random_choice` : boucle avec un element tire au sort dans une liste
+- `with_first_found` : choisit remier element de la liste
+- `with_lines` : parcourt chaque ligne d'un programme
+- `with_inventory_hostname` : parcourt l'inventaire
+
+### Exemples d'utilisation des boucles `with_`
+
+Voici un yaml qui cree et supprime des dossiers avec with_items :
+
+```yaml
+- name: Boucle with_item
+  hosts: scaleway_srv
+  remote_user: root
+  tasks:
+    - name: "Creation de repertoire"
+      ansible.builtin.file:
+        state: directory
+        recurse: true
+        path: "/tmp/{{ item }}"
+      with_items:
+        - test1
+        - test2
+        - test3
+    - name: "Stat sur les dossiers crees"
+      ansible.builtin.stat:
+        path: "/tmp/{{ item }}"
+      with_items:
+        - test1
+        - test2
+        - test3
+      register: __directory_loop_creation
+    - name: "Debug du stat"
+      ansible.builtin.debug:
+        var: __directory_loop_creation
+    - name: "Suppression de repertoire"
+      ansible.builtin.file:
+        state: absent
+        path: "/tmp/{{ item }}"
+      with_items:
+        - test1
+        - test2
+        - test3
+    - name: "Stat sur les dossiers supprimes"
+      ansible.builtin.stat:
+        path: "/tmp/{{ item }}"
+      with_items:
+        - test1
+        - test2
+        - test3
+      register: __directory_loop_deletion
+    - name: "Debug du stat"
+      ansible.builtin.debug:
+        var: __directory_loop_deletion
+```
+
+Nous pouvons remplacer le `with_items` avec la nomenclature suivante, plus concise :
+
+```yaml
+    - name: With_items -> loop
+      ansible.builtin.file:
+        state: directory
+        recurse: true
+        path: "/tmp/{{ item }}"
+      loop: "{{ ['test1', 'test2', 'test3'] | flatten(levels=1) }}"
+```
+
+Avec ce remplacement, nous pouvons constater sur le serveur que les dossiers ont ete crees correctement :
+
+```bash
+root@cloud-1-chbadad-team-6899317:~# ll /tmp
+total 64
+<SNIP>
+drwxr-xr-x  2 root root 4096 Sep 12 09:41 test1/
+drwxr-xr-x  2 root root 4096 Sep 12 09:41 test2/
+drwxr-xr-x  2 root root 4096 Sep 12 09:41 test3/
+```
+
+Ci dessous, un autre exemple avec un system de cle/valeur :
+
+```yaml
+    - name: "Creation de repertoire avec cle:valeur"
+      ansible.builtin.file:
+        state: directory
+        recurse: true
+        path: "/tmp/{{ item.dir }}/{{ item.file }}"
+      with_items:
+        - { dir1: "dir", dir2: "subdir1" }
+        - { dir1: "dir", dir2: "subdir2" }
+        - { dir1: "dir", dir2: "subdir3" }
+```
+
+Cela creera un dossier `dir` avec les sous-dossiers `subdirX`.
+
+On peut egalement mettre ce dictionnaire au sein du `group_vars`, par exemple dans `inventory/group_vars/all.yaml` :
+
+```yml
+directory_list:
+- { dir1: "test", dir2: "subdir1" }
+- { dir1: "test", dir2: "subdir2" }
+- { dir1: "test", dir2: "subdir3" }
+```
+
+Et dans le `playbook` :
+
+```yml
+    - name: "Creation de repertoire avec cle:valeur"
+      ansible.builtin.file:
+        state: directory
+        recurse: true
+        path: "/tmp/{{ item.dir1 }}/{{ item.dir2 }}"
+      with_items: "{{ directory_list }}"
+```
+
+Ou encore :
+
+```yml
+    - name: "Creation de repertoire avec cle:valeur"
+      ansible.builtin.file:
+        state: directory
+        recurse: true
+        path: "/tmp/{{ item.dir1 }}/{{ item.dir2 }}"
+      loop: "{{ directory_list }}"
+```
+
+Resultat :
+
+```bash
+root@cloud-1-chbadad-team-6899317:/tmp# ls -la ./test/
+total 20
+drwxr-xr-x  5 root root 4096 Sep 12 10:53 .
+drwxrwxrwt 17 root root 4096 Sep 12 10:53 ..
+drwxr-xr-x  2 root root 4096 Sep 12 10:53 subdir1
+drwxr-xr-x  2 root root 4096 Sep 12 10:53 subdir2
+drwxr-xr-x  2 root root 4096 Sep 12 10:53 subdir3
+```
+
+### Acces a des elements de l'`inventory`
+
+On peut acceder au element de l'`inventory` via les cle/valeur :
+
+```yaml
+- name: "Creation de repertoire avec cle:valeur de l'inventory"
+  ansible.builtin.file:
+    state: directory
+    recurse: true
+    path: "/tmp/{{ item }}"
+  loop: "{{ groups['all'] }}"
+```
+
+Cela creera des dossier aux noms des hosts specifie dans l'inventaire.
+
+## Le module `apt`
+
+[Lien vers la doc.](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/apt_module.html)
+
+Le module `apt` est le gestionnaire de paquet agnostique de ansible. Cependant il tentera d'utiliser aptitude sur les machines.
+
+### Quelques options utiles du module `apt`
+
+- `update_cache` : `true` ou `false`. Met a jour le cache avant installation.
+- `deb` : installer un pquet deb, local ou remote si le chemin contient `://` (ie, `https://`)
+- `autoremove` : permet de supprimer les dependance inutilisees.
+- `autoclean` : permet de supprimer les donnees des paquets ne pouvant plus etre installes.
+- `cache_valid_time` : duree du cache en secondes.
+- `name`, `package`, `pkg` : le nom d'un paquet a installer
+- `upgrade` : Si `yes` ou `safe`, exécute une mise à niveau sécurisée d'aptitude. Si `full` exécute une mise à niveau complète d'aptitude. Si `dist` exécute une mise à niveau dist avec apt-get. Remarque : Cette commande ne met pas à niveau un paquet spécifique. Utilisez state=latest pour cela.
+- `state` : Indique l'état souhaité du paquet. `latest` garantit l'installation de la dernière version. `build-dep` garantit l'installation des dépendances de build du paquet. `fixed` tente de corriger un système comportant des dépendances défectueuses. Choix :
+  - `absent`
+  - `build-dep`
+  - `latest`
+  - `present` ← (par défaut)
+  - `fixed`
+
+### exemple de l'utilisation du module `apt`
+
+Pour ajouter `docker` :
+
+
+
+```yml
+- name: Install apache httpd (state=present is optional)
+  ansible.builtin.apt:
+    name: apache2
+    state: present
+
+- name: Update repositories cache and install "foo" package
+  ansible.builtin.apt:
+    name: foo
+    update_cache: yes
+
+- name: Remove "foo" package
+  ansible.builtin.apt:
+    name: foo
+    state: absent
+
+- name: Install the package "foo"
+  ansible.builtin.apt:
+    name: foo
+
+- name: Install a list of packages
+  ansible.builtin.apt:
+    pkg:
+    - foo
+    - foo-tools
+
+- name: Install the version '1.00' of package "foo"
+  ansible.builtin.apt:
+    name: foo=1.00
+
+- name: Update the repository cache and update package "nginx" to latest version using default release squeeze-backport
+  ansible.builtin.apt:
+    name: nginx
+    state: latest
+    default_release: squeeze-backports
+    update_cache: yes
+
+- name: Install the version '1.18.0' of package "nginx" and allow potential downgrades
+  ansible.builtin.apt:
+    name: nginx=1.18.0
+    state: present
+    allow_downgrade: yes
+
+- name: Install zfsutils-linux with ensuring conflicted packages (e.g. zfs-fuse) will not be removed.
+  ansible.builtin.apt:
+    name: zfsutils-linux
+    state: latest
+    fail_on_autoremove: yes
+
+- name: Install latest version of "openjdk-6-jdk" ignoring "install-recommends"
+  ansible.builtin.apt:
+    name: openjdk-6-jdk
+    state: latest
+    install_recommends: no
+
+- name: Update all packages to their latest version
+  ansible.builtin.apt:
+    name: "*"
+    state: latest
+
+- name: Upgrade the OS (apt-get dist-upgrade)
+  ansible.builtin.apt:
+    upgrade: dist
+
+- name: Run the equivalent of "apt-get update" as a separate step
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: Only run "update_cache=yes" if the last one is more than 3600 seconds ago
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Pass options to dpkg on run
+  ansible.builtin.apt:
+    upgrade: dist
+    update_cache: yes
+    dpkg_options: 'force-confold,force-confdef'
+
+- name: Install a .deb package
+  ansible.builtin.apt:
+    deb: /tmp/mypackage.deb
+
+- name: Install the build dependencies for package "foo"
+  ansible.builtin.apt:
+    pkg: foo
+    state: build-dep
+
+- name: Install a .deb package from the internet
+  ansible.builtin.apt:
+    deb: https://example.com/python-ppq_0.1-1_all.deb
+
+- name: Remove useless packages from the cache
+  ansible.builtin.apt:
+    autoclean: yes
+
+- name: Remove dependencies that are no longer required
+  ansible.builtin.apt:
+    autoremove: yes
+
+- name: Remove dependencies that are no longer required and purge their configuration files
+  ansible.builtin.apt:
+    autoremove: yes
+    purge: true
+
+- name: Run the equivalent of "apt-get clean" as a separate step
+  ansible.builtin.apt:
+    clean: yes
+```
+
+### Redemarrage du serveur grace au module `reboot`
+
+[Lien vers la doc.](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/reboot_module.html)
+
+On peut ajouter le bloc suivant afin de rebooter apres un upgrade ou autre :
+
+```yml
+- name: "Reboot Machine"
+  ansible.builtin.reboot:
+    msg: "Reboot du serveur dans 5 secondes operee via Ansible"
+    connect_timeout: 5
+    pre_reboot_delay: 0 # si < 60 sec, est mis a 0..
+    post_reboot_delay: 30
+    test_command: uptime
+```
+
+Resultat :
+
+```bash
+cloud-1 | CHANGED => {
+    "changed": true,
+    "elapsed": 30,
+    "rebooted": true
+}
+```
+
+## Gestion des cles SSH avec les modules `ansible.posix.authorized_key` et `community.crypto.openssh_keypair`
+
+[Lien vers la doc de `authorized_key`](https://docs.ansible.com/ansible/latest/collections/ansible/posix/authorized_key_module.html)
+
+[Lien vers la doc de `openssh_keypair`](https://docs.ansible.com/ansible/latest/collections/community/crypto/openssh_keypair_module.html)
+
+`authorized_key` ajoute ou supprime une cle ssh autorise (dans le fichier du meme nom) pour un utilisateur donne.
+
+`openssh_keypair` genere une cle et permet de la gerer.
+
+> [!WARNING]
+> Il faut bien faire attention a qui on est, la gestion des utilisateurs et des cles peut etre complique a plusieurs egards.
+
+### Quelques options utiles du modules `openssh_keypair`
+
+- `attributes` : attributs des fichiers
+- `passphrase` : mot de passe pour la cle.
+- `comment` : commentaire sur la cle
+- `force` : force le renouvellement de la cle meme si elle existe
+- `group` : groupe du fichier
+- `mode` : permissions (chmod like)
+- `owner` : proprietaire
+- `path` : chemin des cles
+- `regenerate` : `never`, `fail`, `partial_idempotence` (defaut), `full_idempotence`, `always`.
+- `state` : `present`, `absent`
+- `type` : rsa, dsa, rsa1, ecdsa, ed25519
+
+> [!TIP]
+> Si une cle est cassee, il faut passer l'attribut force a yes.
+
+### Exemple d'utilisation du module `openssh_keypair`
+
+On va generer une cle en local (sur la machine node manager, l'host) :
+
+```yml
+- name: generation de cle ssh
+  community.crypto.openssh_keypair:
+    path: '/tmp/testssh'
+    state: 'present'
+  delegates_to: localhost
+  run_once: true
+```
+
+Cela cree la cle. Cependant le module ne prend pas en charge les mots de passes hashes ou un vault, ce qui rend son utilisation a mon avis restreinte a des environnements qui ne necessitent pas une forte securite.
+
+### Quelques options utiles du module `authorized_key`
+
+- `comment` : change le commentaire sur la cle
+- `exclusive` : si oui ou non on supprime les autre cles non specifiees dans la fichier authorized_keys. De ;ultipl cles peuvent etre en effet specifie dans le `key`.
+- `key`: Une ou plusieurs cles publiques. Peuvent etre separees par un retour a la ligne "\n". Peut etre aussu une url comme `https://github.com/username.keys` ou bienvia `file://`.
+- `manage_dir` : Si oui ou non le module doit gerer le dossier. Si oui, il va creer le repertoire ainsi que les differents droits sur le dossier et les fichiers. Il faut mettre `false` si on utilise un repertoire different pour le fichier authorized_keys.
+- `path` : Le chemin d'acces du fichier `authorized_keys`
+- `state` : `present` ou `absent`.
+- `user` : le nom d'utilisateur sur leuquel sera installe le `authorized_keys`
+- `validate_certs` : valider ou non les certificats si url.
+
+### Exemple d'utilisation du module `authorized_key`
+
+Exemple pris du site Ansible :
+
+```yml
+- name: Set authorized key taken from file
+  ansible.posix.authorized_key:
+    user: charlie
+    state: present
+    key: "{{ lookup('file', '/home/charlie/.ssh/id_rsa.pub') }}"
+
+- name: Set authorized keys taken from url
+  ansible.posix.authorized_key:
+    user: charlie
+    state: present
+    key: https://github.com/charlie.keys
+
+- name: Set authorized keys taken from path on controller node
+  ansible.posix.authorized_key:
+    user: charlie
+    state: present
+    key: file:///home/charlie/.ssh/id_rsa.pub
+
+- name: Set authorized keys taken from url using lookup
+  ansible.posix.authorized_key:
+    user: charlie
+    state: present
+    key: "{{ lookup('url', 'https://github.com/charlie.keys', split_lines=False) }}"
+
+- name: Set authorized key in alternate location
+  ansible.posix.authorized_key:
+    user: charlie
+    state: present
+    key: "{{ lookup('file', '/home/charlie/.ssh/id_rsa.pub') }}"
+    path: /etc/ssh/authorized_keys/charlie
+    manage_dir: false
+
+- name: Set up multiple authorized keys
+  ansible.posix.authorized_key:
+    user: deploy
+    state: present
+    key: '{{ item }}'
+  with_file:
+    - public_keys/doe-jane
+    - public_keys/doe-john
+
+- name: Set authorized key defining key options
+  ansible.posix.authorized_key:
+    user: charlie
+    state: present
+    key: "{{ lookup('file', '/home/charlie/.ssh/id_rsa.pub') }}"
+    key_options: 'no-port-forwarding,from="10.0.1.1"'
+
+- name: Set authorized key without validating the TLS/SSL certificates
+  ansible.posix.authorized_key:
+    user: charlie
+    state: present
+    key: https://github.com/user.keys
+    validate_certs: false
+
+- name: Set authorized key, removing all the authorized keys already set
+  ansible.posix.authorized_key:
+    user: root
+    key: "{{ lookup('file', 'public_keys/doe-jane') }}"
+    state: present
+    exclusive: true
+
+- name: Set authorized key for user ubuntu copying it from current user
+  ansible.posix.authorized_key:
+    user: ubuntu
+    state: present
+    key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
+```
+
+## `delegate_to`, `run_once`, `local`, `local_action`
+
+[Lien vers la doc.](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_delegation.html)
+
+Deleguer une tache consiste a executer une tache sur une autre serveur que ceux specifies au sein de l'inventory.
+
+Une `local_action` sert a executer une action en local comme son nom l'indique.
+
+`run_once` specifie que le job ne doit etre fait qu'une seule fois.
+
+> [!WARNING]
+> Certaines taches telles que `include`, `add_host`, et `debug` ne peuvent pas etre deleguees. Si l'attribut `connection` indique que le `support` est a False ou None, alors la tache ne peut pas etre deleguee.
+
+### Exemple de delegation
+
+Venant de la documentation Ansible :
+
+```yml
+---
+- hosts: webservers
+  serial: 5
+
+  tasks:
+    - name: Take out of load balancer pool
+      ansible.builtin.command: /usr/bin/take_out_of_pool {{ inventory_hostname }}
+      delegate_to: 127.0.0.1
+
+    - name: Actual steps would go here
+      ansible.builtin.yum:
+        name: acme-web-stack
+        state: latest
+
+    - name: Add back to load balancer pool
+      ansible.builtin.command: /usr/bin/add_back_to_pool {{ inventory_hostname }}
+      delegate_to: 127.0.0.1
+```
+
+### Exemple d'une `local_action`
+
+```yml
+---
+# ...
+
+  tasks:
+    - name: Take out of load balancer pool
+      local_action: ansible.builtin.command /usr/bin/take_out_of_pool {{ inventory_hostname }}
+
+# ...
+
+    - name: Add back to load balancer pool
+      local_action: ansible.builtin.command /usr/bin/add_back_to_pool {{ inventory_hostname }}
+```
+
+### Exemple de `run_once`
+
+```yml
+---
+# ...
+
+  tasks:
+    - name: Send summary mail
+      local_action:
+        module: community.general.mail
+        subject: "Summary Mail"
+        to: "{{ mail_recipient }}"
+        body: "{{ mail_body }}"
+      run_once: True
+```
+
