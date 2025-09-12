@@ -24,12 +24,12 @@
   - [Le `playbook`](#le-playbook)
     - [Quelques options](#quelques-options)
     - [Exemple d'un simple playbook avec le module debug](#exemple-dun-simple-playbook-avec-le-module-debug)
-  - [Le module `file`](#le-module-file)
+  - [Le module `ansible.builtin.file`](#le-module-ansiblebuiltinfile)
     - [Exemple d'utilisation du module file](#exemple-dutilisation-du-module-file)
-  - [Le module `user`](#le-module-user)
+  - [Le module `ansible.builtin.user`](#le-module-ansiblebuiltinuser)
     - [Quelques options utiles du module `user`](#quelques-options-utiles-du-module-user)
     - [Quelques exemple de l'utilisation du module `user`](#quelques-exemple-de-lutilisation-du-module-user)
-  - [Les `register` et le module `stat`](#les-register-et-le-module-stat)
+  - [Les `register` et le module `ansible.builtin.stat`](#les-register-et-le-module-ansiblebuiltinstat)
     - [Les options utiles du module `stat`](#les-options-utiles-du-module-stat)
     - [Exemple d'utilisation du module `stat` avec un `register`](#exemple-dutilisation-du-module-stat-avec-un-register)
     - [Quelques notes a propos des `registers`](#quelques-notes-a-propos-des-registers)
@@ -37,10 +37,10 @@
     - [Les boucles `with_<lookup_name>`](#les-boucles-with_lookup_name)
     - [Exemples d'utilisation des boucles `with_`](#exemples-dutilisation-des-boucles-with_)
     - [Acces a des elements de l'`inventory`](#acces-a-des-elements-de-linventory)
-  - [Le module `apt`](#le-module-apt)
+  - [Le module `ansible.builtin.apt`](#le-module-ansiblebuiltinapt)
     - [Quelques options utiles du module `apt`](#quelques-options-utiles-du-module-apt)
     - [exemple de l'utilisation du module `apt`](#exemple-de-lutilisation-du-module-apt)
-    - [Redemarrage du serveur grace au module `reboot`](#redemarrage-du-serveur-grace-au-module-reboot)
+    - [Redemarrage du serveur grace au module `ansible.builtin.reboot`](#redemarrage-du-serveur-grace-au-module-ansiblebuiltinreboot)
   - [Gestion des cles SSH avec les modules `ansible.posix.authorized_key` et `community.crypto.openssh_keypair`](#gestion-des-cles-ssh-avec-les-modules-ansibleposixauthorized_key-et-communitycryptoopenssh_keypair)
     - [Quelques options utiles du modules `openssh_keypair`](#quelques-options-utiles-du-modules-openssh_keypair)
     - [Exemple d'utilisation du module `openssh_keypair`](#exemple-dutilisation-du-module-openssh_keypair)
@@ -50,6 +50,10 @@
     - [Exemple de delegation](#exemple-de-delegation)
     - [Exemple d'une `local_action`](#exemple-dune-local_action)
     - [Exemple de `run_once`](#exemple-de-run_once)
+    - [Exemple de `connection`](#exemple-de-connection)
+  - [Le module `ansible.builtin.copy`](#le-module-ansiblebuiltincopy)
+    - [Quelques options utiles du module `copy`](#quelques-options-utiles-du-module-copy)
+    - [Quelques exemples de l'utilisation du module `copy`](#quelques-exemples-de-lutilisation-du-module-copy)
 
 ## Documentations
 
@@ -442,7 +446,7 @@ PLAY RECAP *********************************************************************
 cloud-1                    : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0 
 ```
 
-## Le module `file`
+## Le module `ansible.builtin.file`
 
 [Lien vers la doc.](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/file_module.html)
 
@@ -718,7 +722,7 @@ Voici un exemple complet venant du site d'ansible :
     state: absent
 ```
 
-## Le module `user`
+## Le module `ansible.builtin.user`
 
 [Lien vers la doc.](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/user_module.html#ansible-builtin-user-module-manage-user-accounts)
 
@@ -874,7 +878,7 @@ ok: [cloud-1] => {
 }
 ```
 
-## Les `register` et le module `stat`
+## Les `register` et le module `ansible.builtin.stat`
 
 [Lien vers le doc du module stat](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/stat_module.html)
 [Lien vers la doc des registers](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_variables.html#registering-variables)
@@ -1228,7 +1232,7 @@ On peut acceder au element de l'`inventory` via les cle/valeur :
 
 Cela creera des dossier aux noms des hosts specifie dans l'inventaire.
 
-## Le module `apt`
+## Le module `ansible.builtin.apt`
 
 [Lien vers la doc.](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/apt_module.html)
 
@@ -1366,7 +1370,7 @@ Pour ajouter `docker` :
     clean: yes
 ```
 
-### Redemarrage du serveur grace au module `reboot`
+### Redemarrage du serveur grace au module `ansible.builtin.reboot`
 
 [Lien vers la doc.](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/reboot_module.html)
 
@@ -1589,5 +1593,113 @@ Venant de la documentation Ansible :
         to: "{{ mail_recipient }}"
         body: "{{ mail_body }}"
       run_once: True
+```
+
+### Exemple de `connection`
+
+On peut executer un playbook localement :
+
+```yml
+---
+- hosts: 127.0.0.1
+  connection: local
+```
+  
+Ou bien via le clie `ansible-playbook playbook.yml --connection local`
+
+## Le module `ansible.builtin.copy`
+
+Le module `copy` sert a copier des fichiers et a gerer diverses options autour de la copie de fichier.
+
+### Quelques options utiles du module `copy`
+
+- `attributes` : les attributs du fichier resultant. Fonctionne commela commande `chattr`.
+- `backup` : Cree un backup du fichier original avec le timestamp.
+- `checksum` : Utilise pour valider si la copie du fichier a ete correctement faite.
+- `content` : Quand utilise a la place de `src`, configure le fichier directement a la valeur specifie. Ne fonctionne que si `dest` est un fichier. Cree le fichier s'il n'existe pas. On peut l'utiliser avec `ansible.builtin.template` pour lui faire contenir des variables.
+- `decrypt` : Controle le dechiffrement automatique du du fichier avec le vault.
+- `dest` : chemin de destination du fichier. Si :
+  - `src` est un dossier, `dest` doit l'etre egalement.
+  - `dest` n'existe paset si `dest` se termine par `/`ou que `src` est un dossierm `dest` est cree.
+  - `dest` est un chemin relatif, le dossier de depart est determine par l'hote distant.
+  - si `src` et `dest` sont des fichiersm le dossier parent de `dest` n'est pas cree et la tache echoue s'il n'existe pas.
+- `directory_mode` Configure les permission des dossiers nouvellement crees au mode specifie. Voir `mode` pour la syntaxe.
+- `follow` : suivre les liens s'ils existent sur le system (hard/soft link).
+- `force` : Si `true`, le fichier distant sera remplace quand le contenu est different de la source. Si `false`, le fichier ne sera copie que si le chemin n'existe pas.
+- `group`: groupe du fichier / dossier, similaire a la commande `chown`. Si pas specifie, le groupe sera celui de l'utilisateur courant, sauf si on est root, auquel cas le proprietaire precedent pourra etre preserve.
+- `local_follow` : comme `follow`, mais sur la machine hote.
+- `mode` : les permission du fichier ou du dossier copie. Fonctionne comme `chmod`. Voir [le module `ansible.builtin.file.`](#le-module-ansiblebuiltinfile)
+- `owner` : definit le proprietaire du dossier ou du fichier. Si pas specifie, le groupe sera celui de l'utilisateur courant, sauf si on est root, auquel cas le proprietaire precedent pourra etre preserve. Si c'est un nombre de specifie, c'est un UID qui sera pris en compte et NON un nom d'utilisateur.
+- `remote_src` : Determine si `true` ou `false` le fichier doit etre cherche sur la machine geree a distance ou si celui ci doit etre trouve localement.
+- `src` : le chemin local du fichier a copier. Absolu ou relatif.Si cela est un dossier, la copie est recursive. **Cela n'est pas vrai** si le chemin d'acces se termine par `/`, auquel cas seulle contenu du dossier, sans les sous dossiers eventuels, sera copie.
+- `validate` : sert a valider les fichiers. Voir exemples pour plus de details. Voir aussi [ici](https://docs.ansible.com/ansible/latest/reference_appendices/faq.html#complex-configuration-validation)
+
+### Quelques exemples de l'utilisation du module `copy`
+
+Exemple venant du site de Ansible :
+
+```yml
+- name: Copy file with owner and permissions
+  ansible.builtin.copy:
+    src: /srv/myfiles/foo.conf
+    dest: /etc/foo.conf
+    owner: foo
+    group: foo
+    mode: '0644'
+
+- name: Copy file with owner and permission, using symbolic representation
+  ansible.builtin.copy:
+    src: /srv/myfiles/foo.conf
+    dest: /etc/foo.conf
+    owner: foo
+    group: foo
+    mode: u=rw,g=r,o=r
+
+- name: Another symbolic mode example, adding some permissions and removing others
+  ansible.builtin.copy:
+    src: /srv/myfiles/foo.conf
+    dest: /etc/foo.conf
+    owner: foo
+    group: foo
+    mode: u+rw,g-wx,o-rwx
+
+- name: Copy a new "ntp.conf" file into place, backing up the original if it differs from the copied version
+  ansible.builtin.copy:
+    src: /mine/ntp.conf
+    dest: /etc/ntp.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+
+- name: Copy a new "sudoers" file into place, after passing validation with visudo
+  ansible.builtin.copy:
+    src: /mine/sudoers
+    dest: /etc/sudoers
+    validate: /usr/sbin/visudo -csf %s
+
+- name: Copy a "sudoers" file on the remote machine for editing
+  ansible.builtin.copy:
+    src: /etc/sudoers
+    dest: /etc/sudoers.edit
+    remote_src: yes
+    validate: /usr/sbin/visudo -csf %s
+
+- name: Copy using inline content
+  ansible.builtin.copy:
+    content: '# This file was moved to /etc/other.conf'
+    dest: /etc/mine.conf
+
+- name: If follow=yes, /path/to/file will be overwritten by contents of foo.conf
+  ansible.builtin.copy:
+    src: /etc/foo.conf
+    dest: /path/to/link  # link to /path/to/file
+    follow: yes
+
+- name: If follow=no, /path/to/link will become a file and be overwritten by contents of foo.conf
+  ansible.builtin.copy:
+    src: /etc/foo.conf
+    dest: /path/to/link  # link to /path/to/file
+    follow: no
 ```
 
