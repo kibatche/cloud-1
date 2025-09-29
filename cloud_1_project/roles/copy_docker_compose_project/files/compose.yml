@@ -1,6 +1,6 @@
 services:
   wordpress:
-    image: worpress
+    image: wordpress
     env_file:
       - path: wordpress.env
         required: true
@@ -10,3 +10,7 @@ services:
     - path: mariadb.env
       required: true
   
+  adminer:
+    image: adminer
+    expose:
+      - 127.0.0.1:8080:8080 # do not expose adminer on Internet. Vulnerabilities arise quickly.
