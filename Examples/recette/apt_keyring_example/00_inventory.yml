@@ -1,0 +1,5 @@
+all:
+  hosts:
+    chbd-cloud1.duckdns.org:
+# peut etre rajouter une vm pour la suite, comme ca il y aurait le multiple server. Ne pas oublier de rajouter le hostnme dans /etc/hosts
+# exemple : IP machine = cloud2.local

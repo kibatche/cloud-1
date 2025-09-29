@@ -1,0 +1,6 @@
+- name: "Installation de Docker"
+  hosts: scaleway_srv
+  remote_user: root
+  roles:
+    - check_host # determine si le host est bien de type Ubunutu >= 20.04
+    - install_docker

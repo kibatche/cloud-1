@@ -1,0 +1,59 @@
+---
+# tasks file for roles/install_docker
+- name: "Desinstaller les composants docker si deja presents"
+  ansible.builtin.apt:
+    name: docker.io,docker-doc,docker-compose,docker-compose-v2,podman-docker,containerd,runc
+    state: absent
+
+- name: "Installer gnupg, ca-certificates et curl"
+  ansible.builtin.apt:
+    name:
+      - gnupg
+      - ca-certificates
+      - curl
+    state: present
+    autoclean: true
+
+- name: "Ajout de la cle GPG de docker"
+  block:
+    - name: "Trouver la bonne architecture du serveur distant"
+      ansible.builtin.command:
+        cmd: "dpkg  --print-architecture"
+      register: __remote_srv_arch
+      changed_when: false # determine quand un etat a change -> https://ansible.readthedocs.io/projects/lint/rules/no-changed-when/
+
+    - name: "Telechargement de la cle GPG"
+      ansible.builtin.get_url:
+        url: "https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}/gpg"
+        mode: "a+r"
+        dest: "{{ docker_asc }}"
+
+    - name: "Verification de la presence de la cle"
+      ansible.builtin.stat:
+        path: "{{ docker_asc }}"
+      register: __docker_asc_file
+      failed_when: __docker_asc_file.stat.exists == false
+
+    - name: "Ajout de repo docker"
+      ansible.builtin.apt_repository:
+        filename: docker
+        repo: "deb [arch={{ __remote_srv_arch.stdout }} signed-by=/etc/apt/keyrings/docker.asc] \
+          https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }} {{ ansible_facts['distribution_release'] }} stable"
+        state: present
+
+
+- name: "Installer docker"
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+
+- name: "Demarrer docker"
+  ansible.builtin.systemd:
+    name: "docker"
+    enabled: true
+    state: started

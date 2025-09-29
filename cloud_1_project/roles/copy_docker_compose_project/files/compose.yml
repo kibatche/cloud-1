@@ -1,0 +1,12 @@
+services:
+  wordpress:
+    image: worpress
+    env_file:
+      - path: wordpress.env
+        required: true
+  mariadb:
+    image: mariadb:latest
+    env_file:
+    - path: mariadb.env
+      required: true
+  

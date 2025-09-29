@@ -1,0 +1,3 @@
+all:
+  hosts:
+    chbd-cloud1.duckdns.org:
