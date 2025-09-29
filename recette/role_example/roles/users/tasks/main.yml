@@ -1,0 +1,23 @@
+---
+# tasks file for roles/users
+- name: "Creation de l'utilisateur devops"
+  ansible.builtin.user:
+    name: devops
+    shell: /bin/bash
+    groups: sudo
+    append: true
+    password: "{{ 'motdepasse' | password_hash('sha512') }}"
+
+- name: "Ajout de devops dans les sudoers"
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/devops"
+    content: "devops ALL=(ALL) NOPASSWD: ALL"
+    mode: "0640"
+  become: true
+
+- name: "Deploiement de la cle SSH"
+  ansible.posix.authorized_key:
+    user: devops
+    key: "{{ lookup('file', '/tmp/chbadad_ssh_key.pub') }}"
+    state: present
+  become: true

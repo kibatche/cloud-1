@@ -1,0 +1,7 @@
+---
+- name: "Generation de la cle ssh"
+  community.crypto.openssh_keypair:
+    path: /tmp/chbadad
+    type: ed25519
+    state: present
+    force: false

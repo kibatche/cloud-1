@@ -1,0 +1,41 @@
+---
+# tasks file for roles/nginx
+- name: "Installaton de nginx"
+  ansible.builtin.apt:
+    name: nginx,curl
+    state: present
+    cache_valid_time: 3600
+    update_cache: true
+    update_cache_retries: 3
+
+- name: "Suppression des fihciers par defaut"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  with_item:
+    - "/etc/nginx/site-available/default"
+    - "/etc/nginx/site-enable/default"
+
+- name: "Installation des vhost"
+  ansible.builtin.template:
+    src: "nginx.srv.conf.j2"
+    dest: "/etc/nginx/site-available/default_vhost.conf"
+    owner: root
+    group: root
+    mode: "0644" # w+r r r
+  notify: reload_nginx
+
+- name: "Creation du lien symbolique"
+  ansible.builtin.file:
+    src: "/etc/nginx/site-available/default_vhost.conf"
+    dest: "/etc/nginx/site-enabled/default_vhost.conf"
+    state: link
+
+- name: "Demarrer nginx avant le reload"
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+
+- name: "Flush Handlers"
+  ansible.builtin.meta:
+    flush_handlers # dans recette/role_example/roles/nginx/handlers/main.yml

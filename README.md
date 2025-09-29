@@ -41,6 +41,11 @@
     - [Quelques options utiles du module `apt`](#quelques-options-utiles-du-module-apt)
     - [exemple de l'utilisation du module `apt`](#exemple-de-lutilisation-du-module-apt)
     - [Redemarrage du serveur grace au module `ansible.builtin.reboot`](#redemarrage-du-serveur-grace-au-module-ansiblebuiltinreboot)
+  - [Les modules `ansible.builtin.apt_key` et `ansible.builtin.apt_repository`](#les-modules-ansiblebuiltinapt_key-et-ansiblebuiltinapt_repository)
+    - [Quelques options utiles pour `ansible.builtin.apt_key`](#quelques-options-utiles-pour-ansiblebuiltinapt_key)
+    - [Quelques exemple de l'utilisation du module `ansible.builtin.apt_key`](#quelques-exemple-de-lutilisation-du-module-ansiblebuiltinapt_key)
+    - [Quelques options utiles pour `ansible.builtin.apt_repository`](#quelques-options-utiles-pour-ansiblebuiltinapt_repository)
+    - [Exemple d'installation de docker](#exemple-dinstallation-de-docker)
   - [Gestion des cles SSH avec les modules `ansible.posix.authorized_key` et `community.crypto.openssh_keypair`](#gestion-des-cles-ssh-avec-les-modules-ansibleposixauthorized_key-et-communitycryptoopenssh_keypair)
     - [Quelques options utiles du modules `openssh_keypair`](#quelques-options-utiles-du-modules-openssh_keypair)
     - [Exemple d'utilisation du module `openssh_keypair`](#exemple-dutilisation-du-module-openssh_keypair)
@@ -54,6 +59,9 @@
   - [Le module `ansible.builtin.copy`](#le-module-ansiblebuiltincopy)
     - [Quelques options utiles du module `copy`](#quelques-options-utiles-du-module-copy)
     - [Quelques exemples de l'utilisation du module `copy`](#quelques-exemples-de-lutilisation-du-module-copy)
+  - [Les roles](#les-roles)
+    - [La structure d'un role](#la-structure-dun-role)
+    - [En pratique](#en-pratique)
 
 ## Documentations
 
@@ -1396,6 +1404,95 @@ cloud-1 | CHANGED => {
 }
 ```
 
+## Les modules `ansible.builtin.apt_key` et `ansible.builtin.apt_repository`
+
+[Lien vers la doc](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/apt_key_module.html)
+Le premier module sert a ajouter une cle apt afin de pouvoir ajouter des repo apt, par exemple docker.
+
+[Lien vers la doc](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/apt_repository_module.html)
+Le second, permet d'ajouter le depot.
+
+### Quelques options utiles pour `ansible.builtin.apt_key`
+
+- `data`: Le contenu a ajouter dans la cle
+- `file` : le chemin d'acces de la cle
+- `id` : l'identifiant de la cle. Obligatoire dans le cadre d'un suppression (state=absent)
+- `keyring` : le chemin complet vers un fichier de keyring secifique dans `/etc/apt/trusted.gpg.d/`
+- `keyserver` : le serveur de cle ou retrouver la cle
+- `state` : present ou absent
+- `url` : l'url ou trouver la cle
+- `validate_certs` : valider ou non https (equivalent a -k dans curl)
+
+### Quelques exemple de l'utilisation du module `ansible.builtin.apt_key`
+
+```yml
+- name: One way to avoid apt_key once it is removed from your distro, armored keys should use .asc extension, binary should use .gpg
+  block:
+    - name: somerepo | no apt key
+      ansible.builtin.get_url:
+        url: https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x36a1d7869245c8950f966e92d8576a8ba88d21e9
+        dest: /etc/apt/keyrings/myrepo.asc
+        checksum: sha256:bb42f0db45d46bab5f9ec619e1a47360b94c27142e57aa71f7050d08672309e0
+
+    - name: somerepo | apt source
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/myrepo.asc] https://download.example.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+- name: Add an apt key by id from a keyserver
+  ansible.builtin.apt_key:
+    keyserver: keyserver.ubuntu.com
+    id: 36A1D7869245C8950F966E92D8576A8BA88D21E9
+
+- name: Add an Apt signing key, uses whichever key is at the URL
+  ansible.builtin.apt_key:
+    url: https://ftp-master.debian.org/keys/archive-key-6.0.asc
+    state: present
+
+- name: Add an Apt signing key, will not download if present
+  ansible.builtin.apt_key:
+    id: 9FED2BCBDCD29CDF762678CBAED4B06F473041FA
+    url: https://ftp-master.debian.org/keys/archive-key-6.0.asc
+    state: present
+
+- name: Remove a Apt specific signing key, leading 0x is valid
+  ansible.builtin.apt_key:
+    id: 0x9FED2BCBDCD29CDF762678CBAED4B06F473041FA
+    state: absent
+
+# Use armored file since utf-8 string is expected. Must be of "PGP PUBLIC KEY BLOCK" type.
+- name: Add a key from a file on the Ansible server
+  ansible.builtin.apt_key:
+    data: "{{ lookup('ansible.builtin.file', 'apt.asc') }}"
+    state: present
+
+- name: Add an Apt signing key to a specific keyring file
+  ansible.builtin.apt_key:
+    id: 9FED2BCBDCD29CDF762678CBAED4B06F473041FA
+    url: https://ftp-master.debian.org/keys/archive-key-6.0.asc
+    keyring: /etc/apt/trusted.gpg.d/debian.gpg
+
+- name: Add Apt signing key on remote server to keyring
+  ansible.builtin.apt_key:
+    id: 9FED2BCBDCD29CDF762678CBAED4B06F473041FA
+    file: /tmp/apt.gpg
+    state: present
+```
+
+### Quelques options utiles pour `ansible.builtin.apt_repository`
+
+- `codename`: Surcharger le nom de la distrib'. Utile quand ca n'est pas pour un serveur Ubuntu (ie, debian ou mint)
+- `filename` : Nom de la liste de source dans `sources.list.d`. Pr defaut c'est base sur l'url utilise pour l'ajout du repo. Les extensions `.list` sont automatiquement ajoutees.
+- `install_python_apt` : Installer ou non le librairie python pour apt. Sans ca ca ne fonctionne pas.
+- `mode` : mode comme pour les fichiers. 
+- `state` : present ou absent
+- `repo` : la source sous forme de string pour recuperer le depot
+- `update_cache` : comme pour le module apt
+- `update_cache_retries`: comme pour le module apt
+- `validate_certs` : valider ou non https (equivalent a -k dans curl)
+
+### Exemple d'installation de docker
+
 ## Gestion des cles SSH avec les modules `ansible.posix.authorized_key` et `community.crypto.openssh_keypair`
 
 [Lien vers la doc de `authorized_key`](https://docs.ansible.com/ansible/latest/collections/ansible/posix/authorized_key_module.html)
@@ -1702,4 +1799,241 @@ Exemple venant du site de Ansible :
     dest: /path/to/link  # link to /path/to/file
     follow: no
 ```
+
+## Les roles
+
+[Lien vers la doc.](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_reuse_roles.html)
+
+Les roles sont des actions ayant un objectif commun. Ils sont lies a des templates ou des fichiers avec des variables par defaut ou non.
+
+Leur interet est de partager differentes choses au niveau de ansible. On retrouve ces roles dans ansible galaxy par exemple, afin d'installer differentes choses.
+
+Cependant, il n'y  pas besoin de partager afin de les utiliser, car leur caractere reutilisable est pratique et meme essentiel.
+
+Le principe general est un depot git par role.
+
+Un autre principe, par analogie, est celui du lego. I=Plus il est petit, plus il est reutilisable.
+
+Pour etre bien organise, chaque repo doit etre structure de la meme facon.
+
+### La structure d'un role
+
+C'est une arborescence de repertoires et de fichiers :
+
+- Taches : les actions et le point d'entree dans main.yml
+- defaults : les variables par defaut pour eviter les erreurs de ansible
+- `vars` : les variables de roles dans le repertoire `vars`
+- `handlers` : les declencheurs, comme vu a la section precedente
+- `templates` : pour les fichiers jinja .j2
+- `files` : les fichiers a copier ou fichiers statiques
+- `meta` : pour partager sur ansible galaxy et inclure les dependances
+- `test` : les elements pour tester
+- `library` : permet de definir des modules specifiques aux roles
+
+Pour creer une structure de base pour un role, on peut faire :
+
+`ansible-galaxy init nom_du_role`
+
+Exemple d'une structure :
+
+```bash
+roles/
+    common/               # this hierarchy represents a "role"
+        tasks/            #
+            main.yml      #  <-- tasks file can include smaller files if warranted
+        handlers/         #
+            main.yml      #  <-- handlers file
+        templates/        #  <-- files for use with the template resource
+            ntp.conf.j2   #  <------- templates end in .j2
+        files/            #
+            bar.txt       #  <-- files for use with the copy resource
+            foo.sh        #  <-- script files for use with the script resource
+        vars/             #
+            main.yml      #  <-- variables associated with this role
+        defaults/         #
+            main.yml      #  <-- default lower priority variables for this role
+        meta/             #
+            main.yml      #  <-- role dependencies
+        library/          # roles can also include custom modules
+        module_utils/     # roles can also include custom module_utils
+        lookup_plugins/   # or other types of plugins, like lookup in this case
+
+    webtier/              # same kind of structure as "common" was above, done for the webtier role
+    monitoring/           # ""
+    fooapp/               # ""
+```
+
+### En pratique
+
+En premier on definit notre `inventory` dans `00_inventory.yml` :
+
+```yml
+all:
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  scaleway_srv:
+    hosts:
+      cloud-1: #51.159.156.237
+  # peut etre rajouter une vm pour la suite, comme ca il y aurait le multiple server. Ne pas oublier de rajouter le hostnme dans /etc/hosts
+  # exemple : IP machine = cloud2.local
+  vm_srv:
+    hosts:
+      cloud-2:
+```
+
+On cree les dossiers `group_vars`, `host_vars` et `roles` :
+
+```bash
+mkdir group_vars host_vars roles
+```
+
+Puis ensuite on cree les roles :
+
+```bash
+ansible-galaxy init roles/ssh_keygen
+ansible-galaxy init roles/users
+ansible-galaxy init roles/nginx
+```
+
+On cree ensuite le role pour ssh, dans le main a `recette/role_example/roles/ssh_keygen/tasks/main.yml` :
+
+```yml
+---
+- name: "Generation de la cle ssh"
+  community.crypto.openssh_keypair:
+    path: /tmp/chbadad_ssh_key
+    type: ed25519
+    state: present
+    force: false
+```
+
+Maintenant le role users dans `recette/role_example/roles/users/tasks/main.yml` :
+
+```yml
+---
+# tasks file for roles/users
+- name: "Creation de l'utilisateur devops"
+  ansible.builtin.user:
+    name: devops
+    shell: /bin/bash
+    groups: sudo
+    append: true
+    password: "{{ 'motdepasse' | password_hash('sha512') }}"
+
+- name: "Ajout de devops dans les sudoers"
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/devops"
+    content: "devops ALL=(ALL) NOPASSWD: ALL"
+    mode: "0640"
+
+- name: "Deploiement de la cle SSH"
+  ansible.posix.authorized_key:
+    user: devops
+    key: "{{ lookup('file', '/tmp/chbadad_ssh_key.pub') }}"
+    state: present
+```
+
+Ensuite on peut s'attaquer a nginx. Dans un premier temps, on va creer la template nginx dans `recette/role_example/roles/nginx/templates/nginx.srv.conf.j2` :
+
+```python
+server {
+    listen {{ nginx_port }} default_server;
+    root /var/www/html
+    index index.html
+    server_name _;
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+```
+
+Et la tache associee dans `recette/role_example/roles/nginx/tasks/main.yml` :
+
+```yml
+---
+# tasks file for roles/nginx
+- name: "Installaton de nginx"
+  ansible.builtin.apt:
+    name: nginx,curl
+    state: present
+    cache_valid_time: 3600
+    update_cache: true
+    update_cache_retries: 3
+
+- name: "Suppression des fihciers par defaut"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  with_item:
+    - "/etc/nginx/site-available/default"
+    - "/etc/nginx/site-enable/default"
+
+- name: "Installation des vhost"
+  ansible.builtin.template:
+    src: "nginx.srv.conf.j2"
+    dest: "/etc/nginx/site-available/default_vhost.conf"
+    owner: root
+    group: root
+    mode: "0644" # w+r r r
+  notify: reload_nginx
+
+- name: "Creation du lien symbolique"
+  ansible.builtin.file:
+    src: "/etc/nginx/site-available/default_vhost.conf"
+    dest: "/etc/nginx/site-enabled/default_vhost.conf"
+    state: link
+
+- name: "Demarrer nginx avant le reload"
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+
+- name: "Flush Handlers"
+  ansible.builtin.meta:
+    flush_handlers # dans recette/role_example/roles/nginx/handlers/main.yml
+```
+
+Le handler est dans `recette/role_example/roles/nginx/handlers/main.yml` :
+
+```yml
+---
+# handlers file for roles/nginx
+- name: "Reload nginx"
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded
+```
+
+Puis enfin on determine le port par defaut dans `recette/role_example/roles/nginx/defaults/main.yml` :
+
+```yml
+---
+# defaults file for roles/nginx
+nginx_port: 80
+```
+
+On peut surcharger cette valeur via le groupe dans `recette/role_example/group_vars/all.yml` :
+
+```yml
+nginx_port: 8080
+```
+
+Definir un server_name par defaut dans `recette/role_example/roles/nginx/defaults/main.yml` :
+
+```yml
+---
+# defaults file for roles/nginx
+nginx_port: 80
+nginx_server_name: localhost
+```
+
+Et surcharger cette valeur dans le host_vars par exemple dans `recette/role_example/host_vars/scaleway_srv.yml` :
+
+```yml
+nginx_server_name: chbd.duckdns.org
+```
+
+On peut maintenant executer le playbook :
+
+`ansible -i recette/role_example/00_inventory.yml recette/role_example/playbook.yml`
 

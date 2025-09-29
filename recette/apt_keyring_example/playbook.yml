@@ -1,0 +1,4 @@
+- name: "Installation de Docker"
+  hosts: scaleway_srv
+  roles:
+    - install_docker
