@@ -1,0 +1,59 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_ct
+    ports:
+      - "8085:8443"
+    volumes:
+      - wordpress_site:/var/www/html:ro
+      - ./nginx/conf:/etc/nginx/conf.d
+    networks:
+      - frontend
+    depends_on:
+      - wordpress
+  wordpress:
+    image: wordpress_cloud-1
+    build:
+      context: ./wordpress
+      dockerfile: Dockerfile 
+    container_name: wordpress_ct
+    env_file:
+      - path: wordpress.env
+        required: true
+    volumes:
+      - wordpress_site:/var/www/html:rw
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - frontend
+      - backend
+  mariadb:
+    container_name: mariadb_ct
+    image: mariadb
+    env_file: mariadb.env
+    volumes:
+      - mariadb_datas:/var/lib/mysql
+    restart: always
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  adminer:
+    image: adminer
+    container_name: adminer_ct
+    networks:
+      - backend
+    ports:
+      - 127.0.0.1:8080:8080/tcp # do not expose adminer on Internet. Vulnerabilities arise quickly.
+
+volumes:
+  mariadb_datas:
+  wordpress_site:
+networks:
+  frontend:
+  backend:
