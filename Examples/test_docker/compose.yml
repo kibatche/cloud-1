@@ -6,7 +6,7 @@ services:
     ports:
       - "8085:8443"
     volumes:
-      - wordpress_site:/var/www/html:ro
+      # - wordpress_site:/var/www/html:ro
       - ./nginx/conf:/etc/nginx/conf.d
     networks:
       - frontend
@@ -24,6 +24,12 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "stat", "/var/www/html/wp-config.php"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
     networks:
       - frontend
       - backend
@@ -43,7 +49,7 @@ services:
       mariadb:
         condition: service_healthy
       wordpress:
-        condition: service_started
+        condition: service_healthy
     networks:
       - backend
     user: 33:33
