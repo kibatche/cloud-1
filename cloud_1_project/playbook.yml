@@ -1,6 +1,10 @@
-- name: "Installation de Docker"
+- name: "Installation autmatique de wordpress"
   hosts: scaleway_srv
+  vars_files: secrets/secrets.yml
   remote_user: root
   roles:
     - check_host # determine si le host est bien de type Ubunutu >= 20.04
     - install_docker
+    - install_acme_sh
+    - copy_docker_compose_project
+    # - generate_certs

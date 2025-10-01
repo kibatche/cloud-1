@@ -5,15 +5,6 @@
     name: docker.io,docker-doc,docker-compose,docker-compose-v2,podman-docker,containerd,runc
     state: absent
 
-- name: "Installer gnupg, ca-certificates et curl"
-  ansible.builtin.apt:
-    name:
-      - gnupg
-      - ca-certificates
-      - curl
-    state: present
-    autoclean: true
-
 - name: "Ajout de la cle GPG de docker"
   block:
     - name: "Trouver la bonne architecture du serveur distant"
