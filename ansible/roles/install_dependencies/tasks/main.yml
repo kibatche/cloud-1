@@ -1,0 +1,24 @@
+---
+# tasks file for roles/install_dependencies
+- name: "Installer gnupg, ca-certificates, openssl, socat et curl"
+  ansible.builtin.apt:
+    name:
+      - gnupg
+      - ca-certificates
+      - curl
+      - openssl
+      - socat
+    state: present
+    autoclean: true
+
+- name: "Verification de la presences des dependances."
+  ansible.builtin.command:
+    cmd: which "{{ item }}"
+  with_items:
+    - gpg
+    - curl
+    - openssl
+    - socat
+  register: __check_dependencies
+  changed_when: false
+  failed_when: __check_dependencies.rc == 1

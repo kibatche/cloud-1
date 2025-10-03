@@ -1,0 +1,26 @@
+---
+# tasks file for roles/install_acme_sh
+- name: "Telechargement de acme.sh"
+  ansible.builtin.get_url:
+    url: https://get.acme.sh
+    mode: "0744"
+    dest: /tmp/acme.sh
+
+- name: "Test de l'existence du script de generation de certificats"
+  ansible.builtin.stat:
+    path: /tmp/acme.sh
+  register: __acme_sh_install_script_file
+  failed_when: __acme_sh_install_script_file.stat.exists == false
+
+- name: "Installation de acme.sh pour la generation des certificats."
+  ansible.builtin.shell:
+    cmd: ./acme.sh email=my@example.com
+    chdir: /tmp
+    executable: /bin/bash
+  changed_when: false
+
+- name: "Test de l'existence de acme.sh"
+  ansible.builtin.stat:
+    path: "{{ ansible_facts.env.HOME }}/.acme.sh/acme.sh"
+  register: __acme_sh_script_file
+  failed_when: __acme_sh_script_file.stat.exists == false

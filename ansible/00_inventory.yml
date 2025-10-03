@@ -1,0 +1,9 @@
+all:
+  children:
+    scaleway_srv_with_fqdn:
+      hosts:
+    srv_ip_only:
+      hosts:
+        51.159.156.237: #51.159.156.237 
+        192.168.56.20:
+        # 192.168.56.21:

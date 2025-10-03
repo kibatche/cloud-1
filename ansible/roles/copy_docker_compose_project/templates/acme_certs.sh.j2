@@ -1,0 +1,5 @@
+export DuckDNS_Token="{{ duck_dns_token }}"
+
+
+$HOME/.acme.sh/acme.sh --issue --dns dns_duckdns -d {{ inventory_hostname }}
+$HOME/.acme.sh/acme.sh --install-cert -d {{ inventory_hostname }} --key-file {{ docker_compose_project_srcs }}/nginx/certs/{{ inventory_hostname }}.key  --fullchain-file {{ docker_compose_project_srcs }}/nginx/certs/{{ inventory_hostname }}.crt

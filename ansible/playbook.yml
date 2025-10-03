@@ -1,0 +1,24 @@
+- name: "Installation des dependances pour tous les hosts."
+  hosts: all
+  vars_files: secrets/secrets.yml
+  remote_user: root
+  roles:
+    - check_host # determine si le host est bien de type Ubunutu >= 20.04
+    - install_dependencies
+    - install_docker
+  
+- name: "Installation de acme.sh pour les hosts qui ont un fqdn."
+  hosts: scaleway_srv_with_fqdn
+  vars_files: secrets/secrets.yml
+  remote_user: root
+  roles:
+    - install_acme_sh
+
+- name: "Copie puis lancement de docker compose."
+  hosts: all
+  vars_files: secrets/secrets.yml
+  remote_user: root
+  roles:
+    - copy_docker_compose_project
+    - generate_certs
+    - run_docker_compose

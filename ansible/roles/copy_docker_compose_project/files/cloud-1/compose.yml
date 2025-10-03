@@ -1,0 +1,87 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_ct
+    restart: always
+    ports:
+      - "443:8443"
+      - "127.0.0.1:80:8080" # only for defense, usefull to check the website
+    volumes:
+      - wordpress_site:/var/www/html:ro
+      - ./nginx/conf:/etc/nginx/conf.d
+      - ./nginx/certs:/certs
+    networks:
+      - frontend
+    depends_on:
+      - wordpress
+  wordpress:
+    image: wordpress:php8.2-fpm
+    container_name: wordpress_ct
+    restart: always
+    env_file:
+      - path: wordpress.env
+        required: true
+    volumes:
+      - wordpress_site:/var/www/html:rw
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "stat", "/var/www/html/wp-config.php"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - frontend
+      - backend
+    user: 33:33
+  wordpress-cli:
+    image: wordpress-cli_img
+    build:
+      context: wordpress-cli
+      dockerfile: Dockerfile
+    volumes:
+      - wordpress_site:/var/www/html:rw
+    container_name: wordpress-cli_ct
+    env_file:
+    - path: wordpress.env
+      required: true
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      wordpress:
+        condition: service_healthy
+    networks:
+      - backend
+    user: 33:33
+  mariadb:
+    container_name: mariadb_ct
+    image: mariadb
+    env_file: mariadb.env
+    volumes:
+      - mariadb_datas:/var/lib/mysql
+    restart: always
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  phpmyadmin:
+    image: phpmyadmin
+    env_file: mariadb.env
+    container_name: phpmyadmin_ct
+    networks:
+      - backend
+    ports:
+      - 127.0.0.1:8080:80 # do not expose adminer on Internet. Vulnerabilities arise quickly.
+
+volumes:
+  mariadb_datas:
+  wordpress_site:
+networks:
+  frontend:
+  backend:

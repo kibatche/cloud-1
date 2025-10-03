@@ -1,0 +1,73 @@
+---
+# tasks file for roles/copy_docker_compose_project
+- name: "Copie du dossier source pour docker compose"
+  ansible.builtin.copy:
+    dest: "{{ docker_compose_project_srcs }}/"
+    src: cloud-1/
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: "Test de l'existence du dossier cloud-1"
+  ansible.builtin.stat:
+    path: "{{ docker_compose_project_srcs }}/"
+  register: __cloud_1_dir
+  failed_when: __cloud_1_dir.stat.exists == false
+
+- name: "Copie des templates pour les variable d'environnement"
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "{{ docker_compose_project_srcs }}/{{ item[:-3] }}"
+    mode: "0644"
+    owner: root
+    group: root
+  with_items:
+    - mariadb.env.j2
+    - wordpress.env.j2
+
+- name: "Test de l'existence des variables d'environnement"
+  ansible.builtin.stat:
+    path: "{{ docker_compose_project_srcs }}/{{ item }}"
+  with_items:
+    - mariadb.env
+    - wordpress.env
+  register: __env_files
+  failed_when: __env_files.stat.exists == false
+
+- name: "Copie du script de generation de certificat si l'host est un serveur scaleway."
+  ansible.builtin.template:
+    src: acme_certs.sh.j2
+    dest: "{{ docker_compose_project_srcs }}/generate_certs.sh"
+    mode: "0744"
+    owner: root
+    group: root
+  when: inventory_hostname in groups["scaleway_srv_with_fqdn"]
+
+- name: "Copie du script de generation de certificat si l'host est un serveur local."
+  ansible.builtin.template:
+    src: self_signed_certs.sh.j2
+    dest: "{{ docker_compose_project_srcs }}/generate_certs.sh"
+    mode: "0744"
+    owner: root
+    group: root
+  when: inventory_hostname in groups["srv_ip_only"]
+
+- name: "Test de l'existence du script de generation de certificats"
+  ansible.builtin.stat:
+    path: "{{ docker_compose_project_srcs }}/generate_certs.sh"
+  register: __script_cert_file
+  failed_when: __script_cert_file.stat.exists == false
+
+- name: "Copie de la configuration nginx."
+  ansible.builtin.template:
+    src: wordpress.conf.j2
+    dest: "{{ docker_compose_project_srcs }}/nginx/conf/wordpress.conf"
+    mode: "0744"
+    owner: root
+    group: root
+
+- name: "Test de l'existence du script de generation de certificats"
+  ansible.builtin.stat:
+    path: "{{ docker_compose_project_srcs }}/nginx/conf/wordpress.conf"
+  register: __nginx_conf_file
+  failed_when: __nginx_conf_file.stat.exists == false

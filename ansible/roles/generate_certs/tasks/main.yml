@@ -1,0 +1,16 @@
+---
+# tasks file for roles/generate_certs
+- name: "Generation des certificats."
+  ansible.builtin.shell:
+    cmd: "{{ docker_compose_project_srcs }}/generate_certs.sh"
+    executable: /bin/bash
+  changed_when: false
+
+- name: "Verification de la presence des certificats"
+  ansible.builtin.stat:
+    path: "{{ docker_compose_project_srcs }}/nginx/certs/{{ item }}"
+  with_items:
+    - "{{ inventory_hostname }}.crt"
+    - "{{ inventory_hostname }}.key"
+  register: __certs_files
+  failed_when: __certs_files.stat.exists == false
