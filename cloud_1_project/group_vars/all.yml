@@ -1,2 +1,0 @@
-docker_asc: /etc/apt/keyrings/docker.asc
-docker_compose_project_srcs: /opt/cloud_1

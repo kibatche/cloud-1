@@ -1,7 +1,0 @@
-all:
-  children:
-    scaleway_srv:
-      hosts:
-        chbd-cloud1.duckdns.org: #51.159.156.237
-    local_srv: # pour ajouter une vm par exemple
-      hosts:

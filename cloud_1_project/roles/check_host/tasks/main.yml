@@ -1,6 +1,0 @@
----
-# tasks file for roles/check_host
-- name: Print all available facts
-  ansible.builtin.debug:
-    var: ansible_facts # pour acceder a certaine valeur
-  failed_when: ansible_facts['distribution'] != "Ubuntu" or ansible_facts['distribution_version'] is version('20.04', '>=') == false

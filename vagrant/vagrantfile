@@ -1,0 +1,46 @@
+Vagrant.configure("2") do |config|
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = "2048"
+    vb.cpus = "2"
+  end
+  config.vm.define "vm1" do |vm1|
+    vm1.vm.box = "ubuntu/focal64"
+    vm1.vm.hostname = "ubuntu-cloud1-vm1"
+    vm1.vm.network "private_network", ip: "192.168.56.20"
+    # vm1.vm.network :forwarded_port, guest: 443, host: 8443
+    # vm1.vm.network :forwarded_port, guest: 8080, host: 8081
+    # vm1.vm.network :forwarded_port, guest: 80, host: 8000
+    # Configuration du provisionnement
+    vm1.vm.provision "shell", inline: <<-SHELL
+      mkdir -p /root/.ssh
+      echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBoSFjJpmcgmhClOYvbElwUPn07Z64RxxegltLa53WAT user@cloud1" >> /root/.ssh/authorized_keys
+      chown -R root:root /root/.ssh
+      chmod 700 /root/.ssh
+      chmod 600 /root/.ssh/authorized_keys
+      sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+      sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+      systemctl restart ssh
+      systemctl enable ssh
+    SHELL
+  end
+  # config.vm.define "vm2" do |vm2|
+  #   vm2.vm.box = "ubuntu/focal64"
+  #   vm2.vm.hostname = "ubuntu-cloud1-vm2"
+  #   vm2.vm.network "private_network", ip: "192.168.56.21"
+  #   # vm2.vm.network :forwarded_port, guest: 443, host: 9443
+  #   # vm2.vm.network :forwarded_port, guest: 8080, host: 9081
+  #   # vm2.vm.network :forwarded_port, guest: 80, host: 9000
+  #   # Configuration du provisionnement
+  #   vm2.vm.provision "shell", inline: <<-SHELL
+  #     mkdir -p /root/.ssh
+  #     echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBoSFjJpmcgmhClOYvbElwUPn07Z64RxxegltLa53WAT user@cloud1" >> /root/.ssh/authorized_keys
+  #     chown -R root:root /root/.ssh
+  #     chmod 700 /root/.ssh
+  #     chmod 600 /root/.ssh/authorized_keys
+  #     sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+  #     sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+  #     systemctl restart ssh
+  #     systemctl enable ssh
+  #   SHELL
+  # end
+end
